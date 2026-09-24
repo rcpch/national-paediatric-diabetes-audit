@@ -42,6 +42,17 @@ class ParsedCSVFile:
     ]
 
 
+def csv_read(csv_file):
+    try:
+        return pd.read_csv(csv_file, encoding="utf-8")
+    except UnicodeDecodeError:
+        # This is the default you get from Excel when saving on a UK English machine
+        # Other encodings are unlikely. Our dataset doesn't expect non-ASCII characters
+        # but we have seen non-breaking spaces sneak in (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/999)
+        csv_file.seek(0)
+        return pd.read_csv(csv_file, encoding="ISO-8859-1")
+
+
 def csv_parse(csv_file, dataset_year=2021):
     """
     Read the csv file and return a pandas dataframe
@@ -66,15 +77,7 @@ def csv_parse(csv_file, dataset_year=2021):
     # Convert the predefined column names to lowercase
     lowercase_headings_list = [heading.lower() for heading in HEADINGS_LIST]
 
-    # Read the first row of the csv file
-    try:
-        df = pd.read_csv(csv_file, encoding="utf-8")
-    except UnicodeDecodeError:
-        # This is the default you get from Excel when saving on a UK English machine
-        # Other encodings are unlikely. Our dataset doesn't expect non-ASCII characters
-        # but we have seen non-breaking spaces sneak in (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/999)
-        csv_file.seek(0)
-        df = pd.read_csv(csv_file, encoding="ISO-8859-1")
+    df = csv_read(csv_file)
 
     if any(col.lower() in lowercase_headings_list for col in df.columns):
         # The first row of the csv file matches at least some of the predefined column names
@@ -163,25 +166,21 @@ def csv_parse(csv_file, dataset_year=2021):
             "This file appears to be using the 2021 template but you have selected 2026 as the dataset year. Please check your file and upload again."
         )
 
-    # Set the identifier column
-    if identifier_jersey in df.columns:
-        identifier_column = identifier_jersey
-        _headings_list = [
-            heading for heading in HEADINGS_LIST if heading != identifier_england
-        ]
+    identifier_column = (
+        identifier_jersey if identifier_jersey in df.columns else identifier_england
+    )
 
-        # Gather missing / additional columns
-        missing_columns = list(set(_headings_list) - set(df.columns))
-        additional_columns = list(set(df.columns) - set(_headings_list))
-    else:
-        identifier_column = identifier_england
-        _headings_list = [
-            heading for heading in HEADINGS_LIST if heading != identifier_jersey
-        ]
+    heading_objects = get_csv_heading_objects_for_year_and_unique_identifier(
+        dataset_year=dataset_year,
+        unique_identifier="jersey"
+        if identifier_column == identifier_jersey
+        else "england",
+    )
 
-        # Gather missing / additional columns
-        missing_columns = list(set(_headings_list) - set(df.columns))
-        additional_columns = list(set(df.columns) - set(_headings_list))
+    _headings_list = [obj["heading"] for obj in heading_objects]
+
+    missing_columns = list(set(_headings_list) - set(df.columns))
+    additional_columns = list(set(df.columns) - set(_headings_list))
 
     # Check every row has a unique identifier
     # If not, do not progress and raise error to the user with the row number(s)

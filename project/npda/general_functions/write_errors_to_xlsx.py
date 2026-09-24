@@ -11,7 +11,12 @@ from openpyxl.worksheet.worksheet import Worksheet
 from pandas.api.types import is_datetime64_any_dtype
 
 # import functions
-from project.npda.general_functions.csv.csv_parse import csv_parse
+from project.npda.general_functions.csv.csv_parse import csv_read
+
+from ...constants import (
+    UNIQUE_IDENTIFIER_ENGLAND,
+    UNIQUE_IDENTIFIER_JERSEY,
+)
 
 # import csv mappings
 from ...constants.csv_headings import csv_definition_for
@@ -20,7 +25,6 @@ from ...constants.csv_headings import csv_definition_for
 def write_errors_to_xlsx(
     errors: dict[str, dict[str, list[str]]],
     original_csv_file_bytes: bytes,
-    dataset_year: int = 2021,
 ) -> bytes:
     """
     Write errors to an Excel file. Highlight invalid cells in the source CSV.
@@ -33,11 +37,14 @@ def write_errors_to_xlsx(
     xlsx_file = io.BytesIO()
 
     # Get original data
-    parsed_csv = csv_parse(
-        io.BytesIO(initial_bytes=original_csv_file_bytes), dataset_year=dataset_year
-    )
+    df = csv_read(io.BytesIO(initial_bytes=original_csv_file_bytes))
 
-    df = parsed_csv.df
+    identifier_england = UNIQUE_IDENTIFIER_ENGLAND[0]["heading"]
+    identifier_jersey = UNIQUE_IDENTIFIER_JERSEY[0]["heading"]
+
+    identifier_column = (
+        identifier_jersey if identifier_jersey in df.columns else identifier_england
+    )
 
     # Convert datetime columns to date (strip time)
     df = strip_time_in_dataframe(df)
@@ -49,7 +56,7 @@ def write_errors_to_xlsx(
     df_errors = flatten_errors(
         errors=errors,
         original_data=df,
-        identifier_column=parsed_csv.identifier_column,
+        identifier_column=identifier_column,
     )
 
     # Add sheet that lists the errors.
