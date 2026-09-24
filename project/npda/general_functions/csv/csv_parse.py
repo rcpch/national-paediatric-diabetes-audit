@@ -166,25 +166,14 @@ def csv_parse(csv_file, dataset_year=2021):
             "This file appears to be using the 2021 template but you have selected 2026 as the dataset year. Please check your file and upload again."
         )
 
-    # Set the identifier column
-    if identifier_jersey in df.columns:
-        identifier_column = identifier_jersey
-        _headings_list = [
-            heading for heading in HEADINGS_LIST if heading != identifier_england
-        ]
+    identifier_column = identifier_jersey if identifier_jersey in df.columns else identifier_england
 
-        # Gather missing / additional columns
-        missing_columns = list(set(_headings_list) - set(df.columns))
-        additional_columns = list(set(df.columns) - set(_headings_list))
-    else:
-        identifier_column = identifier_england
-        _headings_list = [
-            heading for heading in HEADINGS_LIST if heading != identifier_jersey
-        ]
+    _headings_list = [
+        heading for heading in HEADINGS_LIST if heading != identifier_column
+    ]
 
-        # Gather missing / additional columns
-        missing_columns = list(set(_headings_list) - set(df.columns))
-        additional_columns = list(set(df.columns) - set(_headings_list))
+    missing_columns = list(set(_headings_list) - set(df.columns))
+    additional_columns = list(set(df.columns) - set(_headings_list))
 
     # Check every row has a unique identifier
     # If not, do not progress and raise error to the user with the row number(s)
