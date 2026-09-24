@@ -170,9 +170,14 @@ def csv_parse(csv_file, dataset_year=2021):
         identifier_jersey if identifier_jersey in df.columns else identifier_england
     )
 
-    _headings_list = [
-        heading for heading in HEADINGS_LIST if heading != identifier_column
-    ]
+    heading_objects = get_csv_heading_objects_for_year_and_unique_identifier(
+        dataset_year=dataset_year,
+        unique_identifier="jersey"
+        if identifier_column == identifier_jersey
+        else "england",
+    )
+
+    _headings_list = [obj["heading"] for obj in heading_objects]
 
     missing_columns = list(set(_headings_list) - set(df.columns))
     additional_columns = list(set(df.columns) - set(_headings_list))
