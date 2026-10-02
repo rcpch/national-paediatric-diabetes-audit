@@ -1,7 +1,10 @@
+import io
+import json
 import pathlib
 
 import pytest
 from django.urls import reverse
+from openpyxl import load_workbook
 
 from project.npda.models import AuditPeriod, NPDAUser
 from project.npda.tests.model_tests.test_submissions import (
@@ -335,3 +338,72 @@ def test_can_download_report_for_2026_audit_period(
         response["Content-Disposition"]
         == 'attachment; filename="test_download_2026_data_quality_report.xlsx"'
     )
+
+
+@pytest.mark.django_db
+def test_can_download_report_when_csv_identifier_header_has_trailing_space(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    The published CSV template has a trailing space on the first heading
+    (`NHS Number `). csv_parse strips whitespace from headings on upload, but
+    the original file bytes are stored unmodified and the data quality report
+    re-reads them, so the download must cope with the trailing space.
+    """
+    audit_period = AuditPeriod.objects.get(slug="2025-2026")
+
+    csv_with_trailing_space_header = _CSV_2021.replace(
+        b"NHS Number,", b"NHS Number ,", 1
+    )
+
+    sub = create_submission(
+        audit_period,
+        pz_code=ALDER_HEY_PZ_CODE,
+        csv_file_name="test_download_trailing_space.csv",
+        csv_file=csv_with_trailing_space_header,
+    )
+    # Simulate the errors recorded during upload (csv_upload stores them via
+    # json.dumps): keyed by CSV row index then model field name
+    sub.errors = json.dumps({"0": {"nhs_number": ["NHS Number is not valid"]}})
+    sub.save()
+
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=AUDIT_CENTRE_EDITOR,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    download_url = reverse(
+        "pdu-submissions",
+        kwargs={
+            "pz_code": ALDER_HEY_PZ_CODE,
+            "audit_period": sub.audit_period.slug,
+        },
+    )
+
+    response = client.post(
+        download_url,
+        {
+            "submit-data": "download-report",
+            "audit_id": sub.id,
+        },
+    )
+
+    assert response.status_code == 200
+    assert (
+        response["Content-Type"]
+        == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    assert (
+        response["Content-Disposition"]
+        == 'attachment; filename="test_download_trailing_space_data_quality_report.xlsx"'
+    )
+
+    # The response should be a readable workbook with the expected sheets
+    workbook = load_workbook(io.BytesIO(response.content))
+    assert workbook.sheetnames == [
+        "Uploaded data (raw)",
+        "Uploaded data (comments)",
+        "Errors - Overview",
+    ]

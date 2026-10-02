@@ -11,11 +11,15 @@ from openpyxl.worksheet.worksheet import Worksheet
 from pandas.api.types import is_datetime64_any_dtype
 
 # import functions
-from project.npda.general_functions.csv.csv_parse import csv_read
+from project.npda.general_functions.csv.csv_parse import (
+    csv_read,
+    normalise_csv_headings,
+)
 
 from ...constants import (
     UNIQUE_IDENTIFIER_ENGLAND,
     UNIQUE_IDENTIFIER_JERSEY,
+    get_csv_heading_objects_for_year_and_unique_identifier,
 )
 
 # import csv mappings
@@ -25,19 +29,31 @@ from ...constants.csv_headings import csv_definition_for
 def write_errors_to_xlsx(
     errors: dict[str, dict[str, list[str]]],
     original_csv_file_bytes: bytes,
+    dataset_year: int = 2021,
 ) -> bytes:
     """
     Write errors to an Excel file. Highlight invalid cells in the source CSV.
 
     Args:
       errors A nested dictionary containing errors grouped by row index, then field.
-
+      original_csv_file_bytes The raw bytes of the uploaded CSV, as stored on the submission.
+      dataset_year Used to resolve the canonical CSV headings for the audit period.
     """
 
     xlsx_file = io.BytesIO()
 
     # Get original data
     df = csv_read(io.BytesIO(initial_bytes=original_csv_file_bytes))
+
+    # The stored CSV bytes are exactly as uploaded: csv_parse normalises the
+    # headings on upload but they are not rewritten before storage. Normalise
+    # them here too (trailing spaces, quotes, casing) so the identifier and
+    # error columns can be found. Cell values are left untouched - this
+    # report shows the data as it was uploaded.
+    headings_objects = get_csv_heading_objects_for_year_and_unique_identifier(
+        dataset_year, "all"
+    )
+    df = normalise_csv_headings(df, headings_objects)
 
     identifier_england = UNIQUE_IDENTIFIER_ENGLAND[0]["heading"]
     identifier_jersey = UNIQUE_IDENTIFIER_JERSEY[0]["heading"]

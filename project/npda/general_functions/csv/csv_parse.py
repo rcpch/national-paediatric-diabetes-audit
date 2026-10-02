@@ -53,6 +53,54 @@ def csv_read(csv_file):
         return pd.read_csv(csv_file, encoding="ISO-8859-1")
 
 
+def normalise_csv_headings(
+    df: pd.DataFrame, headings_objects: tuple[dict, ...]
+) -> pd.DataFrame:
+    """
+    Normalise dataframe column names to their canonical CSV headings.
+
+    Strips surrounding whitespace and quotes, renames old template headings
+    to their current equivalents, and matches headings case-insensitively.
+    Cell values are left untouched.
+
+    Used both on upload (csv_parse) and when regenerating the data quality
+    report from the original stored CSV bytes, which are not normalised on
+    save.
+    """
+    # Remove leading and trailing whitespace on column names
+    # The template published on the RCPCH website has trailing spaces on 'Observation Date: Thyroid Function '
+    df.columns = df.columns.str.strip()
+
+    # issue #1038 - Twinkle users inexplicably submit CSV files with headings that are in quotes.
+    df.columns = df.columns.str.strip("'\"")
+
+    headings_list = [obj["heading"] for obj in headings_objects]
+    lowercase_headings_list = [heading.lower() for heading in headings_list]
+
+    # Replace headings which were different from in the old NPDA template with the new
+    for column in df.columns:
+        lowercase_col = column.lower()
+
+        for heading in headings_objects:
+            if "alternative_headings" in heading:
+                lowercase_alternative_headings = [
+                    h.lower() for h in heading["alternative_headings"]
+                ]
+
+                if lowercase_col in lowercase_alternative_headings:
+                    df = df.rename(columns={column: heading["heading"]})
+
+    # Accept columns case insensitively but replace them with their official version to make life easier later
+    for column in df.columns:
+        if column not in headings_list and column.lower() in lowercase_headings_list:
+            normalised_column = next(
+                c for c in headings_list if c.lower() == column.lower()
+            )
+            df = df.rename(columns={column: normalised_column})
+
+    return df
+
+
 def csv_parse(csv_file, dataset_year=2021):
     """
     Read the csv file and return a pandas dataframe
@@ -90,25 +138,10 @@ def csv_parse(csv_file, dataset_year=2021):
             "The first row of the csv file does not match any of the predefined column names. Please include these and upload the file again."
         )
 
-    # Remove leading and trailing whitespace on column names
-    # The template published on the RCPCH website has trailing spaces on 'Observation Date: Thyroid Function '
-    df.columns = df.columns.str.strip()
+    # Remove leading and trailing whitespace on column names, strip quotes,
+    # rename old template headings and normalise casing (issue #1038)
+    df = normalise_csv_headings(df, HEADINGS_OBJECTS)
 
-    # issue #1038 - Twinkle users inexplicably submit CSV files with headings that are in quotes.
-    df.columns = df.columns.str.strip("'\"")
-
-    # Replace headings which were different from in the old NPDA template with the new
-    for column in df.columns:
-        lowercase_col = column.lower()
-
-        for heading in HEADINGS_OBJECTS:
-            if "alternative_headings" in heading:
-                lowercase_alternative_headings = [
-                    h.lower() for h in heading["alternative_headings"]
-                ]
-
-                if lowercase_col in lowercase_alternative_headings:
-                    df = df.rename(columns={column: heading["heading"]})
     if df.empty:
         raise ValueError(
             "The CSV file contains no data rows. Please add patient data and upload again."
@@ -123,14 +156,6 @@ def csv_parse(csv_file, dataset_year=2021):
         raise ValueError(
             "Suspected too many values in the first row, please check there are no extra values"
         )
-
-    # Accept columns case insensitively but replace them with their official version to make life easier later
-    for column in df.columns:
-        if column not in HEADINGS_LIST and column.lower() in lowercase_headings_list:
-            normalised_column = next(
-                c for c in HEADINGS_LIST if c.lower() == column.lower()
-            )
-            df = df.rename(columns={column: normalised_column})
 
     identifier_england = UNIQUE_IDENTIFIER_ENGLAND[0]["heading"]
     identifier_jersey = UNIQUE_IDENTIFIER_JERSEY[0]["heading"]
