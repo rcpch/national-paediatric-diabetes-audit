@@ -1342,6 +1342,11 @@ def test_missing_columns_causes_error(
 
 
 @pytest.mark.django_db
+# The 2026 dummy sheet contains fixed dates that were in the future when it was
+# written (Date of leaving service 27/09/2026, Death Date 30/09/2026). These are
+# rejected by not_in_the_future_validator, so the number of errors depends on
+# the real-world clock. Freeze time so the assertion is deterministic.
+@freeze_time("2026-09-08")
 def test_case_insensitive_column_headers(
     test_user, dummy_sheet_csv, audit_period_for_dataset_year, dataset_year
 ):
