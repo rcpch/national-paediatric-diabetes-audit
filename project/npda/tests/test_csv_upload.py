@@ -1571,6 +1571,25 @@ def test_trailing_empty_rows_are_ignored(
 
 
 @pytest.mark.django_db
+def test_empty_row_in_the_middle_of_the_csv_still_errors(dummy_sheet_csv, dataset_year):
+    """
+    Only trailing empty rows are ignored. An empty row in the middle of the file
+    is still a data error, reported against the correct row number.
+    """
+    reader = csv.reader(StringIO(dummy_sheet_csv))
+    [header, *rows] = list(reader)
+    rows.insert(1, [""] * len(header))
+
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(header)
+    writer.writerows(rows)
+
+    with pytest.raises(ValueError, match="Row 1 has no NHS Number"):
+        read_csv_from_str(output.getvalue(), dataset_year=dataset_year)
+
+
+@pytest.mark.django_db
 def test_second_row_with_extra_cell_at_the_start(test_user, one_patient_two_visits):
     csv = one_patient_two_visits.to_csv(index=False, date_format="%d/%m/%Y")
 
