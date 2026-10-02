@@ -157,6 +157,32 @@ def csv_parse(csv_file, dataset_year=2021):
             "Suspected too many values in the first row, please check there are no extra values"
         )
 
+    # Excel exports commonly end with rows of empty cells (",,,,,"), which pandas
+    # parses as rows where every value is NaN. They are not data rows: drop the
+    # trailing block of them so they are not rejected as rows with a missing
+    # unique identifier. Cells containing only whitespace count as empty too.
+    # Only trailing rows are dropped so that the row numbers in any errors
+    # still match the row's position in the file.
+    cell_is_empty = df.isna()
+    for column in df.select_dtypes(include="object").columns:
+        cell_is_empty[column] = cell_is_empty[column] | df[column].str.strip().eq("")
+    empty_row = cell_is_empty.all(axis=1)
+
+    if empty_row.any():
+        non_empty_positions = np.flatnonzero(~empty_row)
+
+        if non_empty_positions.size:
+            # Keep everything up to and including the last non-empty row
+            df = df.iloc[: non_empty_positions[-1] + 1]
+        else:
+            # Every row is empty - reported as no data rows below
+            df = df.iloc[:0]
+
+    if df.empty:
+        raise ValueError(
+            "The CSV file contains no data rows. Please add patient data and upload again."
+        )
+
     identifier_england = UNIQUE_IDENTIFIER_ENGLAND[0]["heading"]
     identifier_jersey = UNIQUE_IDENTIFIER_JERSEY[0]["heading"]
 

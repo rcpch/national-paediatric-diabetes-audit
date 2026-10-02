@@ -1534,6 +1534,62 @@ def test_empty_csv_raises_error(
 
 
 @pytest.mark.django_db
+def test_trailing_empty_rows_are_ignored(
+    test_user,
+    dummy_sheets_folder,
+    dataset_year,
+    audit_period_for_dataset_year,
+):
+    """
+    Rows where every field is empty should be ignored, not rejected as rows
+    with a missing identifier. Excel exports commonly end with these.
+
+    The fixture is the 2026 dummy sheet with three trailing empty rows appended.
+    """
+    if dataset_year < 2026:
+        pytest.skip("Test applies only to 2026+ headings")
+
+    file = dummy_sheets_folder / "dummy_sheet_2026_trailing_empty_rows.csv"
+
+    parsed_csv = csv_parse(file, dataset_year=2026)
+
+    # The three trailing empty rows should not be treated as data rows
+    assert len(parsed_csv.df) == 11, (
+        f"Expected the 3 trailing empty rows to be ignored, got {len(parsed_csv.df)} rows"
+    )
+
+    errors = csv_upload_sync(
+        test_user,
+        parsed_csv.df,
+        _audit_period=audit_period_for_dataset_year,
+        errors_to_return=parsed_csv.errors_to_return,
+    )
+
+    # 10 unique patients, 11 visits (the first patient has two visits)
+    assert Patient.objects.count() == 10
+    assert Visit.objects.count() == 11
+
+
+@pytest.mark.django_db
+def test_empty_row_in_the_middle_of_the_csv_still_errors(dummy_sheet_csv, dataset_year):
+    """
+    Only trailing empty rows are ignored. An empty row in the middle of the file
+    is still a data error, reported against the correct row number.
+    """
+    reader = csv.reader(StringIO(dummy_sheet_csv))
+    [header, *rows] = list(reader)
+    rows.insert(1, [""] * len(header))
+
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(header)
+    writer.writerows(rows)
+
+    with pytest.raises(ValueError, match="Row 1 has no NHS Number"):
+        read_csv_from_str(output.getvalue(), dataset_year=dataset_year)
+
+
+@pytest.mark.django_db
 def test_second_row_with_extra_cell_at_the_start(test_user, one_patient_two_visits):
     csv = one_patient_two_visits.to_csv(index=False, date_format="%d/%m/%Y")
 
