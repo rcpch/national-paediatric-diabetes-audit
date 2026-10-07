@@ -26,14 +26,19 @@
           Your upload has taken too long to process, though some data has still been saved. Please try again later or contact the NPDA team for assistance.
         </p>
       {% endif %}
-      <p>
-        <b>{{ patients_so_far }}
-          {% if timeout %}(out of {{ total_patients }}){% endif %}
-        </b>
-        patients
-        in <b>{{ visits_so_far }}
-        {% if timeout %}(of total {{ total_rows }}){% endif %}
-      </b> rows have been successfully uploaded, processed and saved in NPDA.
+      {% if unsaved_patients or unsaved_visits %}
+        <p class="text-rcpch_orange">
+          {% if unsaved_patients %}
+            {{unsaved_patients}} patients with {{unsaved_visits}} rows
+          {% else %}
+            {{unsaved_visits}} rows
+          {% endif %}
+
+          failed to save entirely due to data quality issues. Please check the data quality report for more information.
+        </p>
+      {% endif %}
+    <p>
+        {{patients_so_far}} patients from {{visits_so_far}} of {{total_rows}} rows have been successfully uploaded, processed and saved in NPDA.
     </p>
     <p>
       Your original CSV has been archived and can be downloaded from the
