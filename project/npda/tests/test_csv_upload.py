@@ -1301,6 +1301,84 @@ def test_duplicate_columns_causes_error(
     )
 
 
+def test_csv_parse_near_duplicate_headings(single_row_valid_df, dataset_year, tmp_path):
+    """
+    Headings that only collide after normalisation (trailing whitespace,
+    casing) should be flagged as duplicate columns, not crash csv_parse.
+
+    Regression test: pd.read_csv only mangles exact duplicate headings, so
+    near-duplicates survived the read and collided in
+    normalise_csv_headings. df[column] then returned a DataFrame instead of
+    a Series, raising AttributeError ('DataFrame' object has no attribute
+    'str') in the trailing-empty-rows check.
+    """
+    df = single_row_valid_df.copy()
+    # Not exact duplicates, so pd.read_csv leaves both headings untouched
+    df[" NHS Number "] = df["NHS Number"]
+    df["date of birth"] = df["Date of Birth"]
+
+    tmp_csv_path = tmp_path / "near_duplicate_headings.csv"
+    df.to_csv(tmp_csv_path, index=False)
+
+    parsed_csv = csv_parse(tmp_csv_path, dataset_year=dataset_year)
+
+    assert "NHS Number" in parsed_csv.duplicate_columns
+    assert "Date of Birth" in parsed_csv.duplicate_columns
+    # The mangled columns are still reported so the user can see them
+    assert "NHS Number.1" in parsed_csv.df.columns
+
+
+@pytest.mark.django_db
+def test_near_duplicate_columns_causes_error(
+    single_row_valid_df,
+    client,
+    test_rcpch_user,
+    tmp_path,
+    audit_period_for_dataset_year,
+):
+    """As test_duplicate_columns_causes_error, but the duplicate headings are
+    not exact matches (whitespace/casing) so only collide after
+    normalisation. The upload should still be rejected with a warning."""
+    df = single_row_valid_df.copy()
+    df["NHS Number_2"] = df["NHS Number"]
+    df["Date of Birth_2"] = df["Date of Birth"]
+
+    tmp_csv_path = tmp_path / "dummy_sheet_test.csv"
+    df.to_csv(tmp_csv_path, index=False)
+
+    with open(tmp_csv_path) as csv_file:
+        csv_contents = csv_file.read()
+
+    # Create near-duplicate headings that pd.read_csv will not mangle
+    csv_contents = csv_contents.replace("NHS Number_2", " NHS Number ")
+    csv_contents = csv_contents.replace("Date of Birth_2", "date of birth")
+
+    near_duplicate_path = tmp_path / "near_duplicate.csv"
+    near_duplicate_path.write_text(csv_contents)
+
+    Submission.objects.all().delete()  # Clear any previous submissions
+
+    client = login_and_verify_user(client, test_rcpch_user)
+
+    url = reverse(
+        "pdu-upload-csv",
+        kwargs={
+            "pz_code": ALDER_HEY_PZ_CODE,
+            "audit_period": audit_period_for_dataset_year.slug,
+        },
+    )
+
+    with open(near_duplicate_path) as csv_file:
+        response = client.post(url, {"csv_upload": csv_file}, format="multipart")
+
+    assert response.status_code == 200
+    assert "Warning: Column errors detected!" in response.content.decode("utf-8")
+
+    assert Submission.objects.count() == 0, (
+        "No submission should be created if there are column errors"
+    )
+
+
 @pytest.mark.django_db
 def test_missing_columns_causes_error(
     test_rcpch_user,

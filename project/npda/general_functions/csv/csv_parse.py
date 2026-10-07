@@ -98,6 +98,25 @@ def normalise_csv_headings(
             )
             df = df.rename(columns={column: normalised_column})
 
+    # pd.read_csv only mangles *exact* duplicate headings (X -> X.1, X.2).
+    # Near-duplicates - "NHS Number" alongside " NHS Number ", a casing
+    # variant, or an alternative heading colliding with its canonical name -
+    # survive the read and only collide after the renames above. Duplicated
+    # labels make df[column] return a DataFrame instead of a Series, which
+    # crashes downstream code with AttributeError. Mangle them the same way
+    # pandas does so csv_parse's duplicate-column detection flags them and
+    # the upload is rejected with a warning instead of a 500.
+    while df.columns.duplicated().any():
+        seen = collections.Counter()
+        mangled_columns = []
+        for column in df.columns:
+            if seen[column]:
+                mangled_columns.append(f"{column}.{seen[column]}")
+            else:
+                mangled_columns.append(column)
+            seen[column] += 1
+        df.columns = mangled_columns
+
     return df
 
 
