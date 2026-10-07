@@ -292,6 +292,11 @@ def csv_parse(csv_file, dataset_year=2021):
         for i, value in df[identifier_column].items()
         if re.fullmatch(r"[\d\s-]+", str(value)) is None
     ]
+
+    logger.warning(f"Rejected invalid_identifier_rows {invalid_identifier_rows}")
+    for row in invalid_identifier_rows:
+        logger.warning(f"\t{row}: \"{df[identifier_column][int(row)]}\"")
+
     if invalid_identifier_rows:
         if len(invalid_identifier_rows) == 1:
             user_error_message = (
