@@ -99,6 +99,40 @@ def normalise_csv_headings(
     return df
 
 
+def repair_float_formatted_identifier(value):
+    """
+    Repair identifiers serialized as floats by the exporting system
+    ('7195730220.0' or '7.19573022E9').
+
+    Excel displays these as clean right-aligned numbers (it parses the
+    float and shows it in general format), so a screenshot of the file
+    looks valid - but str(value) does not match the digits/whitespace/dash
+    check in csv_parse and the whole upload is rejected.
+
+    Values that already pass that check are returned untouched: in
+    particular, float('0123456789') would strip a valid leading zero, so
+    digit strings must never go through float conversion.
+    """
+    if isinstance(value, float):
+        # pandas inferred a numeric column (every cell parsed as a float)
+        if value.is_integer():
+            return str(int(value))
+        return value
+
+    if isinstance(value, str):
+        # Mixed column: float text alongside valid text
+        if re.fullmatch(r"[\d\s-]+", value) is not None:
+            return value
+        try:
+            as_float = float(value)
+        except ValueError:
+            return value
+        if as_float.is_integer():
+            return str(int(as_float))
+
+    return value
+
+
 def read_csv_headings(csv_file) -> list[str]:
     """
     Read the first row of the CSV file as data, returning the headings
@@ -342,6 +376,10 @@ def csv_parse(csv_file, dataset_year=2021):
 
         raise ValueError(user_error_message)
 
+    # Repair identifiers that were serialized as floats before the
+    # digits/whitespace/dash check, so they are not rejected wholesale
+    df[identifier_column] = df[identifier_column].map(repair_float_formatted_identifier)
+
     # Reject the upload if any identifier value contains characters other than
     # digits, whitespace, or dashes. Spaced/dashed NHS numbers (e.g.
     # "719 573 0220", "719-573 0220") are still accepted because they are
@@ -351,6 +389,11 @@ def csv_parse(csv_file, dataset_year=2021):
         for i, value in df[identifier_column].items()
         if re.fullmatch(r"[\d\s-]+", str(value)) is None
     ]
+
+    logger.warning(f"Rejected invalid_identifier_rows {invalid_identifier_rows}")
+    for row in invalid_identifier_rows:
+        logger.warning(f'\t{row}: "{df[identifier_column][int(row)]}"')
+
     if invalid_identifier_rows:
         if len(invalid_identifier_rows) == 1:
             user_error_message = (

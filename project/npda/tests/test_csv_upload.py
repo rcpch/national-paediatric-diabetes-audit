@@ -1546,7 +1546,7 @@ def test_invalid_date_of_birth_column_name_with_mixed_case_column_headers(
         "HbA1c result format", "HBA1C Result Format"
     )
     results = read_csv_from_str(csv, dataset_year=dataset_year)
-    print(results)
+
     assert results.missing_columns == []
     assert results.additional_columns == []
 
@@ -1890,6 +1890,107 @@ def test_spaced_or_dashed_nhs_number_is_accepted(
 
 
 @pytest.mark.django_db
+def test_float_formatted_nhs_number_is_repaired(one_patient_two_visits):
+    """NHS numbers serialized as floats by the exporting system (eg
+    '7195730220.0') must be repaired to plain digit strings, not rejected.
+
+    Excel displays these as clean right-aligned numbers (it parses the
+    float and shows it in general format), so the user cannot see anything
+    wrong in their spreadsheet - but pandas infers the column as float64
+    and str(value) no longer passes the digits/whitespace/dash check.
+    """
+    df = one_patient_two_visits.copy()
+    df["NHS Number"] = [7195730220.0, 7195730220.0]
+
+    parsed = read_csv_from_str(
+        df.to_csv(index=False, date_format="%d/%m/%Y"), dataset_year=2021
+    )
+
+    assert parsed.identifier_column == "NHS Number"
+    assert list(parsed.df["NHS Number"]) == ["7195730220", "7195730220"]
+
+
+@pytest.mark.django_db
+def test_scientific_notation_nhs_number_is_repaired(one_patient_two_visits):
+    """As above, but the floats are serialized in scientific notation
+    (eg '7.19573022E9'). Excel still displays these as clean right-aligned
+    10-digit numbers, so the screenshot of the file looks valid.
+    """
+    csv_str = modify_raw_csv(
+        one_patient_two_visits.to_csv(index=False, date_format="%d/%m/%Y"),
+        replacements=[
+            {"row": 1, "column": "NHS Number", "value": "7.19573022E9"},
+            {"row": 2, "column": "NHS Number", "value": "7.19573022E9"},
+        ],
+    )
+
+    parsed = read_csv_from_str(csv_str, dataset_year=2021)
+
+    assert parsed.identifier_column == "NHS Number"
+    assert list(parsed.df["NHS Number"]) == ["7195730220", "7195730220"]
+
+
+@pytest.mark.django_db
+def test_float_formatted_nhs_number_mixed_with_spaced_is_repaired(
+    two_patients_first_with_two_visits_second_with_one,
+):
+    """A single float-formatted cell must not poison the whole upload, and
+    rows that are already valid (spaced numbers) must be left untouched.
+
+    Here the column is object dtype (mixed text and float text) so the
+    repair has to work on string values too, not just float64 columns.
+    """
+    df = two_patients_first_with_two_visits_second_with_one
+    expected_second_patient = df["NHS Number"][2]
+
+    csv_str = modify_raw_csv(
+        df.to_csv(index=False, date_format="%d/%m/%Y"),
+        replacements=[
+            {"row": 1, "column": "NHS Number", "value": "7195730220.0"},
+            {"row": 2, "column": "NHS Number", "value": "7195730220.0"},
+        ],
+    )
+
+    parsed = read_csv_from_str(csv_str, dataset_year=2021)
+
+    assert parsed.identifier_column == "NHS Number"
+    assert list(parsed.df["NHS Number"]) == [
+        "7195730220",
+        "7195730220",
+        expected_second_patient,
+    ]
+
+
+@pytest.mark.django_db
+def test_float_formatted_nhs_number_is_accepted_on_upload(
+    test_user, dummy_sheet_csv, audit_period_for_dataset_year, dataset_year
+):
+    """Production-faithful regression test: a CSV whose NHS Number was
+    exported as a float must survive the full pipeline
+    (raw CSV string -> csv_parse -> csv_upload) and save the patient with
+    the normalised number, not fail identifier validation.
+    """
+    modified_csv = modify_raw_csv(
+        dummy_sheet_csv,
+        replacements=[
+            {"row": 1, "column": "NHS Number", "value": "7195730220.0"},
+        ],
+    )
+
+    parsed = read_csv_from_str(modified_csv, dataset_year=dataset_year)
+    df = parsed.df.head(1)
+
+    errors = csv_upload_sync(
+        test_user,
+        df,
+        _audit_period=audit_period_for_dataset_year,
+    )
+
+    assert "nhs_number" not in errors.get(0, {}), dict(errors)
+    assert Patient.objects.filter(nhs_number="7195730220").count() == 1
+
+
+@pytest.mark.django_db
 def test_dates_with_short_year(one_patient_two_visits):
     csv = one_patient_two_visits.to_csv(index=False, date_format="%d/%m/%y")
     df = read_csv_from_str(csv).df
@@ -1909,29 +2010,15 @@ def test_urine_albumin_value_is_rounded_to_one_decimal(
     # --- Debugging: inspect raw CSV header and parsed/cleaned columns ---
     # Print raw header and codepoints to detect unexpected characters (e.g. daggers)
     header_line = csv.splitlines()[0]
-    print("raw header repr:", repr(header_line))
-    print("header codepoints:", [hex(ord(ch)) for ch in header_line])
 
     # Inspect parse results before upload
     parsed = read_csv_from_str(csv, dataset_year=dataset_year)
-    print("parsed.columns:", parsed.df.columns.tolist())
-    print("parsed.template_columns sample:", parsed.template_columns[:10])
-    print("parsed.missing_columns:", parsed.missing_columns)
-    print("parsed.additional_columns:", parsed.additional_columns)
 
     # Run csv_clean to normalise and parse dates, then inspect the Hba1c date column
     from project.npda.general_functions.csv.csv_clean import csv_clean
 
     df = parsed.df
     df = csv_clean(df, dataset_year=dataset_year)
-
-    hba_col = get_field_heading("hba1c_date", dataset_year=dataset_year)
-    if hba_col in df.columns:
-        print("hba1c_date dtype:", df[hba_col].dtype)
-        for i, v in enumerate(df[hba_col].tolist()[:5]):
-            print(f"hba1c_date[{i}]:", repr(v), type(v))
-    else:
-        print(hba_col, "not found in parsed dataframe columns")
 
     # Proceed with the normal upload assertions
     csv_upload_sync(test_user, df, _audit_period=audit_period_for_dataset_year)
