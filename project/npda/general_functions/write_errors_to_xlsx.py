@@ -29,7 +29,7 @@ from ...constants.csv_headings import csv_definition_for
 def write_errors_to_xlsx(
     errors: dict[str, dict[str, list[str]]],
     original_csv_file_bytes: bytes,
-    dataset_year: int = 2021,
+    dataset_year: int,
 ) -> bytes:
     """
     Write errors to an Excel file. Highlight invalid cells in the source CSV.
@@ -73,6 +73,7 @@ def write_errors_to_xlsx(
         errors=errors,
         original_data=df,
         identifier_column=identifier_column,
+        dataset_year=dataset_year,
     )
 
     # Add sheet that lists the errors.
@@ -198,13 +199,14 @@ def flatten_errors(
     errors: dict[int, dict[str, list[str]]],
     original_data: pd.DataFrame,
     identifier_column: str,
+    dataset_year: int,
 ) -> pd.DataFrame:
     rows = []
 
     for row_ix, row_errors in errors.items():
         for field, errors in row_errors.items():
             # __all__ errors should be attached to the first column
-            csv_definition = csv_definition_for(field)
+            csv_definition = csv_definition_for(field, dataset_year)
             column = csv_definition["heading"] if csv_definition else identifier_column
 
             rows.append(
