@@ -31,7 +31,6 @@ class ParsedCSVFile:
     template_columns: list[str]
     missing_columns: list[str]
     additional_columns: list[str]
-    duplicate_columns: list[str]
     parse_type_error_columns: list[str]
     # Gather all error messages indexed by row number and the field that caused them
     # csv_upload also has one of these and they are merged before saving
@@ -53,6 +52,35 @@ def csv_read(csv_file):
         return pd.read_csv(csv_file, encoding="ISO-8859-1")
 
 
+def normalise_heading(heading: str, headings_objects: tuple[dict, ...]) -> str:
+    """
+    Normalise a single CSV heading to its canonical form.
+
+    Strips surrounding whitespace and quotes, renames old template headings
+    to their current equivalents, and matches headings case-insensitively.
+    Unrecognised headings are returned unchanged.
+    """
+    # The template published on the RCPCH website has trailing spaces on 'Observation Date: Thyroid Function '
+    # issue #1038 - Twinkle users inexplicably submit CSV files with headings that are in quotes.
+    heading = heading.strip().strip("'\"")
+
+    # Replace headings which were different from in the old NPDA template with the new
+    for obj in headings_objects:
+        if "alternative_headings" in obj:
+            if heading.lower() in [h.lower() for h in obj["alternative_headings"]]:
+                return obj["heading"]
+
+    headings_list = [obj["heading"] for obj in headings_objects]
+
+    # Accept columns case insensitively but replace them with their official version to make life easier later
+    if heading not in headings_list and heading.lower() in [
+        h.lower() for h in headings_list
+    ]:
+        return next(c for c in headings_list if c.lower() == heading.lower())
+
+    return heading
+
+
 def normalise_csv_headings(
     df: pd.DataFrame, headings_objects: tuple[dict, ...]
 ) -> pd.DataFrame:
@@ -67,38 +95,100 @@ def normalise_csv_headings(
     report from the original stored CSV bytes, which are not normalised on
     save.
     """
-    # Remove leading and trailing whitespace on column names
-    # The template published on the RCPCH website has trailing spaces on 'Observation Date: Thyroid Function '
-    df.columns = df.columns.str.strip()
-
-    # issue #1038 - Twinkle users inexplicably submit CSV files with headings that are in quotes.
-    df.columns = df.columns.str.strip("'\"")
-
-    headings_list = [obj["heading"] for obj in headings_objects]
-    lowercase_headings_list = [heading.lower() for heading in headings_list]
-
-    # Replace headings which were different from in the old NPDA template with the new
-    for column in df.columns:
-        lowercase_col = column.lower()
-
-        for heading in headings_objects:
-            if "alternative_headings" in heading:
-                lowercase_alternative_headings = [
-                    h.lower() for h in heading["alternative_headings"]
-                ]
-
-                if lowercase_col in lowercase_alternative_headings:
-                    df = df.rename(columns={column: heading["heading"]})
-
-    # Accept columns case insensitively but replace them with their official version to make life easier later
-    for column in df.columns:
-        if column not in headings_list and column.lower() in lowercase_headings_list:
-            normalised_column = next(
-                c for c in headings_list if c.lower() == column.lower()
-            )
-            df = df.rename(columns={column: normalised_column})
-
+    df.columns = [normalise_heading(column, headings_objects) for column in df.columns]
     return df
+
+
+def read_csv_headings(csv_file) -> list[str]:
+    """
+    Read the first row of the CSV file as data, returning the headings
+    verbatim.
+
+    pd.read_csv treats the first row as a header and renames exact duplicate
+    headings (NHS Number -> NHS Number.1), which hides duplicates from any
+    later check. Reading the row as data instead returns the headings
+    exactly as they appear in the file.
+    """
+
+    def rewind():
+        # Paths are re-opened by pandas on each read, so need no rewinding
+        if hasattr(csv_file, "seek"):
+            csv_file.seek(0)
+
+    def read(encoding):
+        return pd.read_csv(
+            csv_file,
+            header=None,
+            nrows=1,
+            dtype=str,
+            keep_default_na=False,
+            encoding=encoding,
+        )
+
+    # Rewind first: csv_parse reads the dataframe before calling this, so a
+    # file-like may already be at EOF
+    rewind()
+    try:
+        header_row = read("utf-8")
+    except UnicodeDecodeError:
+        # This is the default you get from Excel when saving on a UK English machine
+        # Other encodings are unlikely. Our dataset doesn't expect non-ASCII characters
+        # but we have seen non-breaking spaces sneak in (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/999)
+        rewind()
+        header_row = read("ISO-8859-1")
+
+    rewind()
+
+    if header_row.empty:
+        return []
+
+    return [str(heading) for heading in header_row.iloc[0]]
+
+
+def find_duplicate_headings(
+    raw_headings: list[str], headings_objects: tuple[dict, ...]
+) -> list[tuple[str, int]]:
+    """
+    Find headings which appear more than once, once normalised to their
+    canonical form. Returns (heading, count) pairs sorted by heading.
+
+    Headings which differ only in spacing, quotation marks or capitalisation
+    count as duplicates, as do old template headings alongside their current
+    equivalents. Empty headings are ignored: they cannot collide with a real
+    column and are reported as additional columns instead.
+    """
+    counts = collections.Counter(
+        normalise_heading(heading, headings_objects)
+        for heading in raw_headings
+        if heading
+    )
+    return sorted((heading, count) for heading, count in counts.items() if count > 1)
+
+
+def reject_duplicate_headings(csv_file, headings_objects: tuple[dict, ...]) -> None:
+    """
+    Raise ValueError if the CSV's header row contains duplicate headings.
+
+    Duplicate headings make df[column] return a DataFrame instead of a
+    Series, which crashes downstream code, so they are rejected up front -
+    before pandas has had a chance to rename exact duplicates
+    (NHS Number -> NHS Number.1) and hide them.
+    """
+    duplicate_headings = find_duplicate_headings(
+        read_csv_headings(csv_file), headings_objects
+    )
+
+    if duplicate_headings:
+        duplicate_summary = ", ".join(
+            f"'{heading}' (appears {count} times)"
+            for heading, count in duplicate_headings
+        )
+        raise ValueError(
+            f"The CSV file contains duplicate columns: {duplicate_summary}. "
+            "Note that columns which differ only in spacing, quotation marks "
+            "or capitalisation are also treated as duplicates. Please remove "
+            "the duplicate columns and upload the file again."
+        )
 
 
 def csv_parse(csv_file, dataset_year=2021):
@@ -137,6 +227,13 @@ def csv_parse(csv_file, dataset_year=2021):
         raise ValueError(
             "The first row of the csv file does not match any of the predefined column names. Please include these and upload the file again."
         )
+
+    # Reject duplicate columns up front, before normalisation. The headings
+    # are read as data (see read_csv_headings) so that exact duplicates have
+    # not been renamed by pandas (NHS Number -> NHS Number.1) and
+    # near-duplicates (differing only in spacing, quotes or capitalisation)
+    # are caught too.
+    reject_duplicate_headings(csv_file, HEADINGS_OBJECTS)
 
     # Remove leading and trailing whitespace on column names, strip quotes,
     # rename old template headings and normalise casing (issue #1038)
@@ -268,16 +365,7 @@ def csv_parse(csv_file, dataset_year=2021):
             )
         raise ValueError(user_error_message)
 
-    # Duplicate columns appear in the dataframe as XYZ.1, XYZ.2 etc
-    duplicate_columns = []
-
     parse_type_error_columns = []
-
-    for column in df.columns:
-        result = re.match(r"([\w ]+)\.\d+$", column)
-
-        if result and result.group(1) not in duplicate_columns:
-            duplicate_columns.append(result.group(1))
 
     for obj in HEADINGS_OBJECTS:
         if obj.get("data_type") != "date":
@@ -406,7 +494,6 @@ def csv_parse(csv_file, dataset_year=2021):
         template_columns,
         missing_columns,
         additional_columns,
-        duplicate_columns,
         parse_type_error_columns,
         errors_to_return,
     )
