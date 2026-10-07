@@ -627,7 +627,16 @@ def upload_csv_in_progress(request, audit_period, pdu):
     visits_so_far = Patient.objects.filter(submissions=last_submission).aggregate(
         Count("visit")
     )["visit__count"]
-    upload_complete = total_rows == visits_so_far and total_patients == patients_so_far
+    unsaved_patients = total_patients - patients_so_far
+    unsaved_visits = total_rows - visits_so_far
+    # The celery task flips submission_active to True once csv_upload has
+    # finished, even if some rows failed validation and were not saved.
+    # The row counts alone can never match the CSV totals in that case, so the
+    # flag is the primary completion signal; the counts and the timeout below
+    # remain as fallbacks (e.g. if the task crashes).
+    upload_complete = last_submission.submission_active or (
+        total_rows == visits_so_far and total_patients == patients_so_far
+    )
     csv_file_name = last_submission.csv_file_name
     if timeout:
         upload_complete = True  # if timeout, we assume the upload is complete as this triggers redirect to upload_complete template
@@ -651,6 +660,8 @@ def upload_csv_in_progress(request, audit_period, pdu):
         else 0,
         "upload_complete": upload_complete,
         "timeout": timeout,
+        "unsaved_patients": unsaved_patients,
+        "unsaved_visits": unsaved_visits,
         "breadcrumbs": data_breadcrumbs(
             pdu,
             audit_period,
