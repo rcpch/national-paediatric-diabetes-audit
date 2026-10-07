@@ -14,7 +14,6 @@ from pandas.api.types import is_datetime64_any_dtype
 from project.npda.general_functions.csv.csv_parse import (
     csv_read,
     normalise_csv_headings,
-    reject_duplicate_headings,
 )
 
 from ...constants import (
@@ -53,13 +52,6 @@ def write_errors_to_xlsx(
     # report shows the data as it was uploaded.
     headings_objects = get_csv_heading_objects_for_year_and_unique_identifier(
         dataset_year, "all"
-    )
-
-    # Stored CSVs cannot contain duplicate headings (uploads with them are
-    # rejected), but fail loudly rather than render an ambiguous report if
-    # one ever slips through
-    reject_duplicate_headings(
-        io.BytesIO(initial_bytes=original_csv_file_bytes), headings_objects
     )
 
     df = normalise_csv_headings(df, headings_objects)
