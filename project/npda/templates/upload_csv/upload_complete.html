@@ -29,16 +29,16 @@
       {% if unsaved_patients or unsaved_visits %}
         <p class="text-rcpch_orange">
           {% if unsaved_patients %}
-            {{unsaved_patients}} patients with {{unsaved_visits}} rows
+            {{unsaved_patients}} patient{{ unsaved_patients|pluralize }} with {{unsaved_visits}} row{{ unsaved_visits|pluralize }}
           {% else %}
-            {{unsaved_visits}} rows
+            {{unsaved_visits}} row{{ unsaved_visits|pluralize }}
           {% endif %}
 
           failed to save entirely due to data quality issues. Please check the data quality report for more information.
         </p>
       {% endif %}
     <p>
-        {{patients_so_far}} patients from {{visits_so_far}} of {{total_rows}} rows have been successfully uploaded, processed and saved in NPDA.
+        {{patients_so_far}} patient{{ patients_so_far|pluralize }} from {{visits_so_far}} of {{total_rows}} rows have been successfully uploaded, processed and saved in NPDA.
     </p>
     <p>
       Your original CSV has been archived and can be downloaded from the
