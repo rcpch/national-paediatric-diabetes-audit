@@ -53,6 +53,7 @@ def write_errors_to_xlsx(
     headings_objects = get_csv_heading_objects_for_year_and_unique_identifier(
         dataset_year, "all"
     )
+
     df = normalise_csv_headings(df, headings_objects)
 
     identifier_england = UNIQUE_IDENTIFIER_ENGLAND[0]["heading"]

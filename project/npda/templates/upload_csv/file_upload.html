@@ -37,7 +37,7 @@
         </div>
         {% comment %} end of employer alert {% endcomment %}
       </div>
-      {% if missing_columns or additional_columns or duplicate_columns %}
+      {% if missing_columns or additional_columns %}
         <div class="w-6/12 m-6">
           <div role="alert" class="alert alert-warning">
             <span class="fa-stack">
@@ -60,16 +60,6 @@
             <h3 class="font-bold">Unexpected additional columns</h3>
             <ul>
               {% for column in additional_columns %}
-                <li>
-                  {{ column }}
-                </li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-          {% if duplicate_columns %}
-            <h3 class="font-bold">Duplicate columns</h3>
-            <ul>
-              {% for column in duplicate_columns %}
                 <li>
                   {{ column }}
                 </li>
