@@ -407,3 +407,76 @@ def test_can_download_report_when_csv_identifier_header_has_trailing_space(
         "Uploaded data (comments)",
         "Errors - Overview",
     ]
+
+
+@pytest.mark.django_db
+def test_errors_overview_uses_2026_headings_for_2026_upload(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    For a 2026 upload, the Errors - Overview sheet must report each error
+    against the 2026 CSV heading for that field.
+
+    psychological_additional_support_status diverges between datasets (the
+    2021 and 2026 templates use different headings for the same model field),
+    so an error recorded against it must be marked with the 2026 heading, not
+    the 2021 one.
+    """
+    audit_period = AuditPeriod.objects.get(slug="2026-2027")
+    sub = create_submission(
+        audit_period,
+        pz_code=ALDER_HEY_PZ_CODE,
+        csv_file_name="test_download_2026.csv",
+        csv_file=_CSV_2026,
+    )
+    # Simulate the errors recorded during upload (csv_upload stores them via
+    # json.dumps): keyed by CSV row index then model field name
+    sub.errors = json.dumps(
+        {"0": {"psychological_additional_support_status": ["This field is required."]}}
+    )
+    sub.save()
+
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=AUDIT_CENTRE_EDITOR,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    download_url = reverse(
+        "pdu-submissions",
+        kwargs={
+            "pz_code": ALDER_HEY_PZ_CODE,
+            "audit_period": sub.audit_period.slug,
+        },
+    )
+
+    response = client.post(
+        download_url,
+        {
+            "submit-data": "download-report",
+            "audit_id": sub.id,
+        },
+    )
+
+    assert response.status_code == 200
+
+    workbook = load_workbook(io.BytesIO(response.content))
+    overview_sheet = workbook["Errors - Overview"]
+
+    # Header row: Original CSV Row | NHS Number | Column | Errors
+    assert [cell.value for cell in overview_sheet[1]] == [
+        "Original CSV Row",
+        "NHS Number",
+        "Column",
+        "Errors",
+    ]
+
+    # The single error row must be marked against the 2026 heading.
+    # CSV row 0 is the first data row, displayed as row 2 (1-based + header).
+    assert [cell.value for cell in overview_sheet[2]] == [
+        2,
+        "719 573 0220",
+        "Following annual psychological screening, was the patient assessed as requiring additional psychological support outside of routine care?",
+        "This field is required.",
+    ]
