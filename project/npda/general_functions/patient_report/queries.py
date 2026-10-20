@@ -1171,10 +1171,21 @@ def count_service_transitions_by_quarter(pdu, audit_period) -> dict:
     return result
 
 
+def _median_of(values) -> float:
+    """Median of a non-empty iterable of numeric HbA1c values."""
+    sorted_vals = sorted(float(v) for v in values)
+    mid = len(sorted_vals) // 2
+    if len(sorted_vals) % 2 == 0:
+        return (sorted_vals[mid - 1] + sorted_vals[mid]) / 2
+    return sorted_vals[mid]
+
+
 def hba1c_stats_by_diabetes_type(pdu, audit_period) -> dict:
     """Mean and median HbA1c stratified by diabetes type for the dashboard.
 
-    Mirrors CalculateKPIS.calculate_kpi_hba1c_vals_stratified_by_diabetes_type().
+    Mirrors CalculateKPIS.calculate_kpi_hba1c_vals_stratified_by_diabetes_type():
+    each patient's median HbA1c is calculated first, then the mean / median of
+    those per-patient medians (NOT the mean / median of all visit values).
 
     Returns:
         {
@@ -1247,17 +1258,13 @@ def hba1c_stats_by_diabetes_type(pdu, audit_period) -> dict:
         for visit in valid_visits:
             values_by_patient[visit["patient__pk"]].append(visit[hba1c_key])
 
-        all_values = [v for vals in values_by_patient.values() for v in vals]
+        # KPI 44/45 definition: each patient's median HbA1c first, then the
+        # mean / median of those per-patient medians.
+        patient_medians = [_median_of(vals) for vals in values_by_patient.values()]
 
-        if all_values:
-            mean_mmol = float(sum(all_values) / len(all_values))
-            sorted_vals = sorted(float(v) for v in all_values)
-            mid = len(sorted_vals) // 2
-            median_mmol = (
-                (sorted_vals[mid - 1] + sorted_vals[mid]) / 2
-                if len(sorted_vals) % 2 == 0
-                else sorted_vals[mid]
-            )
+        if patient_medians:
+            mean_mmol = float(sum(patient_medians) / len(patient_medians))
+            median_mmol = _median_of(patient_medians)
             result[key] = {
                 "mean_mmol_mol": round(mean_mmol),
                 "median_mmol_mol": round(median_mmol),
@@ -1466,7 +1473,8 @@ def all_pdus_t1dm_bubble_map_data(audit_period) -> list[dict]:
             "label": str,            # lead_organisation_name or pz_code
             "pz_code": str,
             "patient_count": int,    # eligible T1DM patients in the audit period
-            "median_hba1c": int | None,  # median HbA1c in mmol/mol
+            "median_hba1c": int | None,  # median of per-patient median HbA1c
+                                          # (mmol/mol), KPI 45 definition
         }
 
     Uses the same eligibility filters as ``count_eligible_patients()`` and the
@@ -1551,12 +1559,15 @@ def all_pdus_t1dm_bubble_map_data(audit_period) -> list[dict]:
         )
         hba1c_key = "hba1c_mmol_mol"
 
-    # Group HbA1c values by PDU
-    hba1c_by_pdu: dict[str, list] = defaultdict(list)
+    # Group HbA1c values by PDU and patient so each patient's median can be
+    # calculated first (KPI 45 definition)
+    hba1c_by_pdu_and_patient: dict[str, dict[int, list]] = defaultdict(
+        lambda: defaultdict(list)
+    )
     for row in hba1c_rows:
         pz = patient_pdu_map.get(row["patient__pk"])
         if pz:
-            hba1c_by_pdu[pz].append(row[hba1c_key])
+            hba1c_by_pdu_and_patient[pz][row["patient__pk"]].append(row[hba1c_key])
 
     result = []
     for pz_code, pdu in pdus.items():
@@ -1564,18 +1575,13 @@ def all_pdus_t1dm_bubble_map_data(audit_period) -> list[dict]:
         if count == 0:
             continue
 
-        hba1c_vals = hba1c_by_pdu.get(pz_code, [])
-        if hba1c_vals:
-            sorted_vals = sorted(float(v) for v in hba1c_vals)
-            mid = len(sorted_vals) // 2
-            median_hba1c = (
-                (sorted_vals[mid - 1] + sorted_vals[mid]) / 2
-                if len(sorted_vals) % 2 == 0
-                else sorted_vals[mid]
-            )
-            median_hba1c = round(median_hba1c)
-        else:
-            median_hba1c = None
+        # KPI 45 definition: each patient's median HbA1c first, then the
+        # median of those per-patient medians.
+        patient_medians = [
+            _median_of(vals)
+            for vals in hba1c_by_pdu_and_patient.get(pz_code, {}).values()
+        ]
+        median_hba1c = round(_median_of(patient_medians)) if patient_medians else None
 
         coords = pdu.lead_organisation_geocoordinates
         result.append(

@@ -44,19 +44,25 @@ def _create_submission(user, audit_period):
 
 
 def _add_t1dm_patient_with_visit(submission, audit_period, hba1c=60):
-    """Create a T1DM patient with a visit and add to the submission."""
+    """Create a T1DM patient with a visit and add to the submission.
+
+    ``hba1c`` may be a single value or a list of values (one visit per value).
+    """
+    if not isinstance(hba1c, (list, tuple)):
+        hba1c = [hba1c]
     patient = PatientFactory(
         diabetes_type=T1DM,
         date_of_birth=audit_period.start_date - relativedelta(years=11, days=2),
         diagnosis_date=audit_period.start_date - relativedelta(days=200),
     )
-    VisitFactory(
-        patient=patient,
-        visit_date=audit_period.start_date + relativedelta(days=10),
-        hba1c=hba1c,
-        hba1c_date=audit_period.start_date + relativedelta(days=10),
-        hba1c_format=1,  # mmol/mol — required for 2021 dataset HbA1c normalisation
-    )
+    for i, value in enumerate(hba1c):
+        VisitFactory(
+            patient=patient,
+            visit_date=audit_period.start_date + relativedelta(days=10 + i * 90),
+            hba1c=value,
+            hba1c_date=audit_period.start_date + relativedelta(days=10 + i * 90),
+            hba1c_format=1,  # mmol/mol — required for 2021 dataset HbA1c normalisation
+        )
     submission.patients.add(patient)
     return patient
 
@@ -158,7 +164,7 @@ def test_patient_count_reflects_t1dm_only(
 def test_median_hba1c_calculated_correctly(
     seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
 ):
-    """median_hba1c is the median of all T1DM HbA1c values in the period."""
+    """median_hba1c is the median of per-patient median HbA1c values (KPI 45)."""
     user = _get_audit_team_user()
     pdu = user.organisation_employers.first()
     pdu.lead_organisation_geocoordinates = ALDER_HEY_COORDS
@@ -167,13 +173,17 @@ def test_median_hba1c_calculated_correctly(
     audit_period = AuditPeriod.objects.get_default_audit_period()
     submission = _create_submission(user, audit_period)
 
-    # Three patients with HbA1c 50, 60, 70 → median = 60
-    for hba1c in (50, 60, 70):
-        _add_t1dm_patient_with_visit(submission, audit_period, hba1c=hba1c)
+    # Two patients with several visits each:
+    #   patient 1: 40, 50, 90 → per-patient median 50
+    #   patient 2: 70, 80, 90 → per-patient median 80
+    # KPI 45: median of per-patient medians = (50 + 80) / 2 = 65
+    # (the median of all six raw values would be 75)
+    _add_t1dm_patient_with_visit(submission, audit_period, hba1c=[40, 50, 90])
+    _add_t1dm_patient_with_visit(submission, audit_period, hba1c=[70, 80, 90])
 
     result = all_pdus_t1dm_bubble_map_data(audit_period)
     assert len(result) == 1
-    assert result[0]["median_hba1c"] == 60
+    assert result[0]["median_hba1c"] == 65
 
 
 @pytest.mark.django_db
