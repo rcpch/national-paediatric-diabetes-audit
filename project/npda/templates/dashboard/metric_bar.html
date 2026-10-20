@@ -1,0 +1,17 @@
+{% load npda_tags %}
+{% comment %}
+Proportion of eligible patients meeting a measure, as a labelled bar.
+Requires: passed, eligible. Optional: label, detail
+{% endcomment %}
+<div class="w-full">
+  <div class="flex items-baseline justify-between gap-2 text-sm">
+    {% if label %}<span class="font-semibold text-rcpch_dark_blue">{{ label }}</span>{% endif %}
+    <span class="ml-auto font-bold text-rcpch_dark_blue tabular-nums">{{ passed|percentage:eligible }}</span>
+    <span class="text-xs text-rcpch_dark_grey tabular-nums w-16 text-right">{{ passed|default:0 }} / {{ eligible|default:0 }}</span>
+  </div>
+  <div class="mt-1 h-2 w-full rounded-full bg-rcpch_lightest_grey overflow-hidden">
+    <div class="h-full rounded-full bg-rcpch_light_blue"
+         style="width: {% if eligible %}{{ passed|percentage:eligible }}{% else %}0%{% endif %}"></div>
+  </div>
+  {% if detail %}<p class="grow-0 mt-1 text-xs text-rcpch_dark_grey">{{ detail }}</p>{% endif %}
+</div>

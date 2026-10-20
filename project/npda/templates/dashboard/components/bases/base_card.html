@@ -1,11 +1,25 @@
-<div class="card bg-base-100 shadow-xl h-full flex flex-col">
-  <div class="card-body">
-    <h2 class="card-title text-sm text-center font-bold">
-      {% block card_title %}{% endblock card_title %}
-    </h2>
-    {% block subtitle %}{% endblock %}
-    <div class="h-full">
-      {% block card_body %}{% endblock %}
+{% comment %}
+Standard Unit Report panel. Blocks:
+- card_title: panel heading
+- card_actions: optional icons/links shown at the right of the heading
+- subtitle: optional one-line explanation under the heading
+- card_body: panel content
+- card_footer: optional footnote
+{% endcomment %}
+<div class="card bg-base-100 border border-rcpch_light_grey rounded-md h-full flex flex-col">
+  <div class="card-body p-5 gap-3">
+    <div class="flex items-start justify-between gap-2">
+      <h3 class="text-sm font-bold text-rcpch_dark_blue">
+        {% block card_title %}{% endblock card_title %}
+      </h3>
+      <div class="flex items-center gap-1 -mt-1">
+        {% block card_actions %}{% endblock card_actions %}
+      </div>
     </div>
+    {% block subtitle %}{% endblock subtitle %}
+    <div class="flex-grow">
+      {% block card_body %}{% endblock card_body %}
+    </div>
+    {% block card_footer %}{% endblock card_footer %}
   </div>
 </div>

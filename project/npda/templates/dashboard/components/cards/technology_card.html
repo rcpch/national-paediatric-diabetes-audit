@@ -1,0 +1,22 @@
+{% extends 'dashboard/components/bases/base_card.html' %}
+{% load npda_tags %}
+{% block card_title %}Diabetes technology{% endblock card_title %}
+{% block card_actions %}
+  <span class="tooltip tooltip-left" data-tip="See treatment in the patient report">
+    {% data_url 'pdu-patient-report' as base_url %}
+    <a class="btn-sm btn-circle flex justify-center items-center text-rcpch_pink"
+       href="{{ base_url }}?category=treatment&sort=treatment_regimen&order=desc">
+      <i class="fa-solid fa-arrow-up-right-from-square"></i>
+    </a>
+  </span>
+{% endblock card_actions %}
+{% block subtitle %}
+  <p class="grow-0 text-xs text-rcpch_dark_grey">Children with type 1 diabetes</p>
+{% endblock subtitle %}
+{% block card_body %}
+  <div class="flex flex-col gap-4">
+    {% include 'dashboard/components/cards/card_partials/technology_row.html' with label="Insulin pump" url_name="pdu-get-pump-partial" docs="developer/kpis/treatment_regimen/#15-insulin-pump-including-those-using-a-pump-as-part-of-a-hybrid-closed-loop" %}
+    {% include 'dashboard/components/cards/card_partials/technology_row.html' with label="Hybrid closed loop" url_name="pdu-get-n-on-hcl-partial" docs="developer/kpis/hybrid_closed_loop_system" %}
+    {% include 'dashboard/components/cards/card_partials/technology_row.html' with label="CGM" url_name="pdu-get-cgm-partial" docs="developer/kpis/glucose_monitoring/#22-number-of-patients-using-a-real-time-continuous-glucose-monitor-cgm-with-alarms" %}
+  </div>
+{% endblock card_body %}

@@ -1,0 +1,8 @@
+{% extends 'dashboard/components/bases/base_card.html' %}
+{% block card_title %}HbA1c distribution{% endblock card_title %}
+{% block card_body %}
+  <!-- Filled out-of-band by the demographics partial -->
+  <div id="hba1c-distribution">
+    {% include 'dashboard/loading_spinner.html' %}
+  </div>
+{% endblock card_body %}

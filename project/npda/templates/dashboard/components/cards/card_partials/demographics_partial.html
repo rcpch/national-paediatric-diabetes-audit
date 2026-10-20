@@ -1,0 +1,65 @@
+{% comment %}
+One response, two destinations:
+- the deprivation / ethnicity charts are swapped into #demographics
+- the HbA1c box plots are swapped out-of-band into #hba1c-distribution
+{% endcomment %}
+{% if imd_has_data or ethnicity_has_data %}
+  <form class="filter mb-3">
+    <input class="btn btn-sm"
+           {% if ethnicity_has_data is False or imd_has_data is False %}disabled{% endif %}
+           checked
+           type="radio"
+           name="ethnicity_deprivation"
+           value="deprivation"
+           aria-label="Deprivation"
+           _="on click add .hidden to #ethnicity-piechart remove .hidden from #deprivation-piechart" />
+    <input class="btn btn-sm"
+           {% if ethnicity_has_data is False or imd_has_data is False %}disabled{% endif %}
+           type="radio"
+           name="ethnicity_deprivation"
+           value="ethnicity"
+           aria-label="Ethnicity"
+           _="on click add .hidden to #deprivation-piechart remove .hidden from #ethnicity-piechart" />
+  </form>
+  <div id="deprivation-piechart">{{ imd_piechart|safe }}</div>
+  <div class="hidden" id="ethnicity-piechart">{{ ethnicity_piechart|safe }}</div>
+{% else %}
+  {% include 'dashboard/no_eligible_patients.html' %}
+{% endif %}
+<div id="hba1c-distribution" hx-swap-oob="true">
+  {% if imd_has_data or ethnicity_has_data %}
+    <form class="filter mb-3">
+      <input class="btn btn-sm"
+             {% if ethnicity_has_data is False or imd_has_data is False %}disabled{% endif %}
+             type="radio"
+             checked
+             name="boxplot"
+             value="sex"
+             aria-label="Sex"
+             _="on click remove .hidden from #sex-boxplot add .hidden to #imd-boxplot add .hidden to #diabetes-type-boxplot" />
+      <input class="btn btn-sm"
+             {% if ethnicity_has_data is False or imd_has_data is False %}disabled{% endif %}
+             type="radio"
+             name="boxplot"
+             value="imd"
+             aria-label="Deprivation"
+             _="on click add .hidden to #sex-boxplot remove .hidden from #imd-boxplot add .hidden to #diabetes-type-boxplot" />
+      <input class="btn btn-sm"
+             {% if ethnicity_has_data is False or imd_has_data is False %}disabled{% endif %}
+             type="radio"
+             name="boxplot"
+             value="diabetes_type"
+             aria-label="Diabetes type"
+             _="on click add .hidden to #sex-boxplot add .hidden to #imd-boxplot remove .hidden from #diabetes-type-boxplot" />
+    </form>
+    <div id="sex-boxplot">{{ sex_box_plot|safe }}</div>
+    <div class="hidden" id="imd-boxplot">{{ imd_box_plot|safe }}</div>
+    <div class="hidden" id="diabetes-type-boxplot">{{ diabetes_type_box_plot|safe }}</div>
+    <p class="grow-0 text-xs text-rcpch_dark_grey mt-2">
+      <i class="fa-solid fa-circle-info"></i>
+      Based on all children in this submission {{ audit_year.0 }} to {{ audit_year.1 }}, excluding those with missing HbA1c data or those within 3 months of diagnosis.
+    </p>
+  {% else %}
+    {% include 'dashboard/no_eligible_patients.html' %}
+  {% endif %}
+</div>

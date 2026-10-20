@@ -1,17 +1,14 @@
 {% extends "dashboard/components/bases/base_secondary_card.html" %}
 {% load npda_tags %}
-{% block card_title %}
-    Moved Out of Area
-    <span class="text-rcpch_pink tooltip"
-          data-tip="Total number of patients with any type of diabetes that moved out of area this audit year"><i class="fa-solid fa-chart-line"></i></span>
-{% endblock %}
+{% block card_title %}Moved out of area{% endblock card_title %}
+{% block card_actions %}
+  <span class="tooltip tooltip-left text-rcpch_pink" data-tip="Total number of patients with any type of diabetes that moved out of area this audit year"><i class="fa-solid fa-circle-question"></i></span>
+{% endblock card_actions %}
 {% block card_content %}
-    <div hx-get="{% data_url 'pdu-get-moved-out-of-area-partial' %}"
-         hx-trigger="load"
-         hx-swap="innerHTML"
-         _="on htmx:afterSwap remove #loading-spinner-moved-out-of-area-card">
-    </div>
-    <div id="loading-spinner-moved-out-of-area-card"
-         class="loading loading-spinner text-rcpch_dark_blue flex flex-grow-1 justify-center items-center h-full w-1/5 mx-auto bg-center">
-    </div>
-{% endblock %}
+  <div hx-get="{% data_url 'pdu-get-moved-out-of-area-partial' %}"
+       hx-trigger="load"
+       hx-swap="innerHTML"
+       class="contents"
+       _="on htmx:afterSwap remove #loading-spinner-moved_out_of_area"></div>
+  {% include 'dashboard/loading_spinner.html' with spinner_id="loading-spinner-moved_out_of_area" spinner_classes="loading-sm" %}
+{% endblock card_content %}

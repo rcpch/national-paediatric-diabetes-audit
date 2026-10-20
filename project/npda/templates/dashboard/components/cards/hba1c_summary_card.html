@@ -1,0 +1,16 @@
+{% extends 'dashboard/components/bases/base_card.html' %}
+{% load npda_tags %}
+{% block card_title %}HbA1c by diabetes type{% endblock card_title %}
+{% block card_actions %}
+  {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/outcomes/#44-mean-hba1c" fa_icon_class="fa-solid fa-eye" %}
+{% endblock card_actions %}
+{% block card_body %}
+  <div hx-get="{% data_url 'pdu-patient-measurements' %}"
+       hx-trigger="load"
+       hx-swap="innerHTML"
+       hx-target="#patient_measurements"
+       _="on htmx:afterRequest remove #loading-spinner-patient-measurements">
+  </div>
+  <div id="patient_measurements"></div>
+  {% include 'dashboard/loading_spinner.html' with spinner_id="loading-spinner-patient-measurements" %}
+{% endblock card_body %}

@@ -1,0 +1,10 @@
+{% load npda_tags %}
+<div>
+  <div class="flex items-center gap-1 text-sm font-semibold text-rcpch_dark_blue">
+    {{ label }}
+    {% include 'common/docs_icon_link_button.html' with rel_url=docs fa_icon_class="fa-solid fa-eye" %}
+  </div>
+  <div hx-get="{% data_url url_name %}" hx-trigger="load" hx-swap="innerHTML">
+    {% include 'dashboard/loading_spinner.html' with spinner_classes="loading-xs" %}
+  </div>
+</div>

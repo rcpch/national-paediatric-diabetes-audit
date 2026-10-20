@@ -1,7 +1,7 @@
 {% extends 'dashboard/components/bases/base_card.html' %}
 {% load npda_tags %}
 {% block card_title %}
-  Distribution of patients - {{ pdu_object.lead_organisation_name }} ({{ pdu_object.pz_code }})
+  Patient locations and deprivation
 {% endblock card_title %}
 {% block card_body %}
   <link rel="stylesheet"
@@ -118,9 +118,7 @@
        hx-target="#organisation_cases_map"
       hx-indicator="#loading-spinner-imd-map">
   </div>
-  <div id="loading-spinner-imd-map"
-       class="loading loading-spinner text-rcpch_dark_blue flex flex-grow-1 justify-center items-center w-1/5 mx-auto bg-center">
-  </div>
+  {% include 'dashboard/loading_spinner.html' with spinner_id="loading-spinner-imd-map" %}
   <figure>
     <div id="organisation-cases-map-error"
          class="alert alert-info hidden"

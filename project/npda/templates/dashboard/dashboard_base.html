@@ -1,46 +1,59 @@
-{% url 'dashboard' as hx_get %}
-<div class="mx-10 p-4 font-montserrat text-rcpch_dark_blue"
-     id="dashboard"
-     hx-get="{{ hx_get }}"
-     hx-trigger="dashboard from:body"
-     hx-swap="innerHTML">
-  <div class="my-6">
-    <p class="text-center text-gray-500 mt-2">
-      Calculated at {{ current_datetime }}
-    </p>
-    <p class="text-center">This data has not been validated by the NPDA team.</p>
-  </div>
+{% comment %}
+Unit Report. Sections, top to bottom:
+1. Unit header - who, which audit period, data quality, actions
+2. Activity - counts this audit year and their quarterly trend
+3. Care processes - health checks, care quality and technology use (T1DM)
+4. HbA1c - summary by diabetes type and distribution
+5. Patient population - age, sex, deprivation and ethnicity
+6. Where patients live - IMD map
+{% endcomment %}
+<div class="max-w-screen-2xl mx-auto px-4 lg:px-10 py-6 font-montserrat text-rcpch_dark_blue"
+     id="dashboard">
+  {% include 'dashboard/components/unit_header.html' %}
+
+  {% include 'dashboard/section_heading.html' with heading="Activity" description="This audit year" %}
   <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
-    <!-- ROW 1 -->
-    <div class="col-span-12 xl:col-span-3">
-      <!-- PDU Card -->
-      {% include 'dashboard/components/cards/pdu_card.html' with pdu_object=pdu_object %}
+    <div class="xl:col-span-4 grid grid-cols-2 gap-4 content-start">
+      {% include "dashboard/components/cards/new_diagnoses_card.html" %}
+      {% include "dashboard/components/cards/new_admissions_card.html" %}
+      {% include "dashboard/components/cards/transitioned_to_adult_service_card.html" %}
+      {% include "dashboard/components/cards/moved_out_of_area_card.html" %}
     </div>
-    <div class="col-span-12 xl:col-span-3">
-      <!-- Audit Details Card -->
-      {% include 'dashboard/components/cards/audit_details_card.html' with audit_period=audit_period current_quarter=current_quarter current_date=current_date days_remaining_until_audit_end_date=days_remaining_until_audit_end_date viewing_stale_period=viewing_stale_period previous_period_still_accepts=previous_period_still_accepts current_audit_period=current_audit_period upload_url_for_current_period=upload_url_for_current_period %}
+    <div class="xl:col-span-8">
+      {% include "dashboard/components/cards/activity_trend_card.html" %}
     </div>
-    <div class="col-span-12 xl:col-span-6">
-      <!-- Patient Measurements Card -->
-      {% include 'dashboard/components/cards/patient_measurements_card.html' with patient_measurements=patient_measurements %}
+  </div>
+
+  {% include 'dashboard/section_heading.html' with heading="Care processes" %}
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+    <div class="xl:col-span-8">
+      {% include 'dashboard/components/cards/care_processes_card.html' %}
     </div>
-    <!-- ROW 2 -->
-    <div class="col-span-12 xl:col-span-6">
-      <!-- Patient Characteristics Card -->
+    <div class="xl:col-span-4">
+      {% include 'dashboard/components/cards/technology_card.html' %}
+    </div>
+  </div>
+
+  {% include 'dashboard/section_heading.html' with heading="HbA1c" %}
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+    <div class="xl:col-span-5">
+      {% include 'dashboard/components/cards/hba1c_summary_card.html' %}
+    </div>
+    <div class="xl:col-span-7">
+      {% include 'dashboard/components/cards/hba1c_distribution_card.html' %}
+    </div>
+  </div>
+
+  {% include 'dashboard/section_heading.html' with heading="Patient population" %}
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+    <div class="xl:col-span-7">
       {% include 'dashboard/components/cards/patient_characteristics_card.html' %}
     </div>
-    <div class="col-span-12 xl:col-span-6">
-      <!-- Other Metrics Card -->
-      {% include 'dashboard/other_metrics.html' with scatter_plot_select_list=scatter_plot_select_list %}
-    </div>
-    <!-- ROW 3 -->
-    <div class="col-span-12 xl:col-span-12">
-      {% include 'dashboard/components/cards/all_patient_charts.html' %}
-    </div>
-    <!-- ROW 4 -->
-    <div class="col-span-12 xl:col-span-12">
-      <!-- Map Card -->
-      {% include 'dashboard/components/cards/imd_map_card.html' with scatterplot_of_cases_for_selected_organisation=charts.scatterplot_of_cases_for_selected_organisation pdu_lead_organisation=pdu_lead_organisation pdu_object=pdu_object %}
+    <div class="xl:col-span-5">
+      {% include 'dashboard/components/cards/demographics_card.html' %}
     </div>
   </div>
+
+  {% include 'dashboard/section_heading.html' with heading="Where patients live" %}
+  {% include 'dashboard/components/cards/imd_map_card.html' %}
 </div>

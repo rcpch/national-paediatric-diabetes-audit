@@ -321,29 +321,33 @@ def all_patient_charts(request, audit_period, pdu):
         else None
     )
 
-    template = (
-        "dashboard/components/cards/card_partials/all_patient_charts_partial.html"
-    )
+    template = "dashboard/components/cards/card_partials/demographics_partial.html"
 
     context = {
         "imd_has_data": not counts_are_zero(imd_counts),
         "ethnicity_has_data": not counts_are_zero(ethnicity_counts),
-        "imd_piechart": imd_piechart.to_html(full_html=False) if imd_piechart else None,
+        "imd_piechart": imd_piechart.to_html(full_html=False, include_plotlyjs=False)
+        if imd_piechart
+        else None,
         "ethnicity_piechart": (
-            ethnicity_piechart.to_html(full_html=False) if imd_piechart else None
+            ethnicity_piechart.to_html(full_html=False, include_plotlyjs=False)
+            if imd_piechart
+            else None
         ),
         "sex_box_plot": (
-            sex_hba1c_mmol_mol_box_plot.to_html(full_html=False)
+            sex_hba1c_mmol_mol_box_plot.to_html(full_html=False, include_plotlyjs=False)
             if sex_hba1c_mmol_mol_box_plot
             else None
         ),
         "imd_box_plot": (
-            imd_hba1c_mmol_mol_box_plot.to_html(full_html=False)
+            imd_hba1c_mmol_mol_box_plot.to_html(full_html=False, include_plotlyjs=False)
             if imd_hba1c_mmol_mol_box_plot
             else None
         ),
         "diabetes_type_box_plot": (
-            diabetes_type_hba1c_mmol_mol_box_plot.to_html(full_html=False)
+            diabetes_type_hba1c_mmol_mol_box_plot.to_html(
+                full_html=False, include_plotlyjs=False
+            )
             if diabetes_type_hba1c_mmol_mol_box_plot
             else None
         ),
@@ -449,8 +453,7 @@ def create_piechart(dict_counts, field):
             },
         },
         margin={"l": 20, "r": 20, "t": 50, "b": 20},  # minimal margins
-        height=500,
-        width=600,
+        height=400,
     )
 
     return fig

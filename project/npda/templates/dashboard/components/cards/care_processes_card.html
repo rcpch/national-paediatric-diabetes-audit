@@ -1,0 +1,20 @@
+{% extends 'dashboard/components/bases/base_card.html' %}
+{% load npda_tags %}
+{% block card_title %}Health checks and care processes{% endblock card_title %}
+{% block card_actions %}
+  <span class="tooltip tooltip-left" data-tip="See health checks in the patient report">
+    <a class="btn-sm btn-circle flex justify-center items-center text-rcpch_pink"
+       href="{% data_url 'pdu-patient-report' %}">
+      <i class="fa-solid fa-arrow-up-right-from-square"></i>
+    </a>
+  </span>
+{% endblock card_actions %}
+{% block subtitle %}
+  <p class="grow-0 text-xs text-rcpch_dark_grey">Eligible children with type 1 diabetes</p>
+{% endblock subtitle %}
+{% block card_body %}
+  <!-- Filled out-of-band by the patient measurements partial -->
+  <div id="care-processes">
+    {% include 'dashboard/loading_spinner.html' %}
+  </div>
+{% endblock card_body %}

@@ -415,7 +415,7 @@ def get_n_on_hcl_partial(request, audit_period, pdu):
 
     return render(
         request,
-        "dashboard/components/cards/card_partials/secondary_card_partial.html",
+        "dashboard/components/cards/card_partials/metric_bar_partial.html",
         context,
     )
 
@@ -438,7 +438,7 @@ def get_pump_partial(request, audit_period, pdu):
 
     return render(
         request,
-        "dashboard/components/cards/card_partials/secondary_card_partial.html",
+        "dashboard/components/cards/card_partials/metric_bar_partial.html",
         context,
     )
 
@@ -460,7 +460,7 @@ def get_cgm_partial(request, audit_period, pdu):
 
     return render(
         request,
-        "dashboard/components/cards/card_partials/secondary_card_partial.html",
+        "dashboard/components/cards/card_partials/metric_bar_partial.html",
         context,
     )
 

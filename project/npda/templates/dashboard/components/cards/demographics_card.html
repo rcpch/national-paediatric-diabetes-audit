@@ -1,0 +1,13 @@
+{% extends 'dashboard/components/bases/base_card.html' %}
+{% load npda_tags %}
+{% block card_title %}Deprivation and ethnicity{% endblock card_title %}
+{% block card_body %}
+  <div hx-get="{% data_url 'pdu-all-patient-charts' %}"
+       hx-trigger="load"
+       hx-swap="innerHTML"
+       hx-target="#demographics"
+       _="on htmx:afterRequest remove #loading-spinner-demographics">
+  </div>
+  <div id="demographics"></div>
+  {% include 'dashboard/loading_spinner.html' with spinner_id="loading-spinner-demographics" %}
+{% endblock card_body %}

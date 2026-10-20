@@ -1,0 +1,8 @@
+{% load npda_tags %}
+<div class="bg-base-100 p-3">
+  <p class="grow-0 text-xs text-rcpch_dark_grey">{{ title }}</p>
+  <p class="grow-0 text-xl font-bold text-rcpch_dark_blue tabular-nums">
+    {{ value|none_to_dash }}
+    <span class="text-xs font-normal text-rcpch_dark_grey">{{ value|percentage:n }}</span>
+  </p>
+</div>

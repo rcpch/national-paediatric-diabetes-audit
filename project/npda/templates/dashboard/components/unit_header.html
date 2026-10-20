@@ -1,0 +1,107 @@
+{% load static %}
+{% load npda_tags %}
+<header class="card bg-base-100 border border-rcpch_light_grey rounded-md">
+  <div class="card-body p-5 gap-4">
+    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+      <!-- Unit identity -->
+      <div class="flex items-start gap-4">
+        {% if pdu_object.pz_code == "PZ999" %}
+          <img src="{% static 'images/coat-of-arms.jpg' %}"
+               alt="Coat of Arms"
+               class="w-12 h-auto">
+        {% endif %}
+        <div>
+          <p class="grow-0 text-xs font-semibold uppercase tracking-wide text-rcpch_pink">
+            Unit Report · {{ pdu_object.pz_code }}
+          </p>
+          <h1 class="text-2xl font-bold text-rcpch_dark_blue">{{ pdu_object.lead_organisation_name }}</h1>
+          {% if pdu_object.pz_code != "PZ999" %}
+            <p class="grow-0 text-sm text-rcpch_charcoal mt-1">
+              <span class="tooltip"
+                    data-tip="{% if pdu_object.paediatric_diabetes_network_name == 'Wales' %}Local Health Board{% else %}Trust{% endif %}">{{ pdu_object.parent_name }}</span>
+              <span class="text-rcpch_mid_grey mx-1">·</span>
+              <span class="tooltip" data-tip="Paediatric Diabetes Network">{{ pdu_object.paediatric_diabetes_network_name }} ({{ pdu_object.paediatric_diabetes_network_code }})</span>
+            </p>
+          {% endif %}
+        </div>
+      </div>
+      <!-- Actions -->
+      <div class="flex flex-wrap gap-2 shrink-0">
+        <a class="btn btn-sm rounded-md bg-rcpch_pink border-rcpch_pink text-white hover:bg-rcpch_pink_dark_tint"
+           href="{% data_url 'pdu-patients' %}">
+          <i class="fa-solid fa-table-list"></i> Patient data
+        </a>
+        <a class="btn btn-sm rounded-md bg-rcpch_light_blue border-rcpch_light_blue text-white hover:bg-rcpch_light_blue_dark_tint"
+           href="{% data_url 'pdu-patient-report' %}">
+          <i class="fa-solid fa-file-medical"></i> Patient report
+        </a>
+      </div>
+    </div>
+    <!-- Audit period and data status -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-px bg-rcpch_light_grey border border-rcpch_light_grey rounded-md overflow-hidden text-sm">
+      <div class="bg-base-100 p-3">
+        <p class="grow-0 text-xs text-rcpch_dark_grey">Audit period</p>
+        <p class="grow-0 font-semibold text-rcpch_dark_blue">{{ audit_period.start_date }} – {{ audit_period.end_date }}</p>
+      </div>
+      <div class="bg-base-100 p-3">
+        <p class="grow-0 text-xs text-rcpch_dark_grey">Current quarter</p>
+        {% if current_quarter %}
+          <p class="grow-0 font-semibold text-rcpch_dark_blue">Q{{ current_quarter }} <span class="font-normal text-rcpch_dark_grey">({{ current_date }})</span></p>
+        {% else %}
+          <p class="grow-0 font-semibold text-rcpch_dark_grey">–</p>
+        {% endif %}
+      </div>
+      <div class="bg-base-100 p-3">
+        <p class="grow-0 text-xs text-rcpch_dark_grey">Days remaining</p>
+        <p class="grow-0 font-semibold text-rcpch_dark_blue">{{ days_remaining_until_audit_end_date|default:"–" }}</p>
+      </div>
+      <div class="bg-base-100 p-3">
+        <p class="grow-0 text-xs text-rcpch_dark_grey">Data quality</p>
+        <!-- Filled out-of-band by the patient measurements partial -->
+        <div id="data-quality-summary">
+          {% include 'dashboard/loading_spinner.html' with spinner_classes="loading-xs" %}
+        </div>
+      </div>
+    </div>
+    {% if viewing_stale_period %}
+      <div role="alert"
+           class="alert border-l-4 border-rcpch_light_blue rounded-md bg-rcpch_light_blue_tint3 text-sm">
+        <i class="fa-solid {% if previous_period_still_accepts %}fa-calendar-plus{% else %}fa-lock{% endif %} text-rcpch_light_blue"></i>
+        <div>
+          <p class="grow-0 font-bold">
+            You are viewing {{ audit_period.display_name }}
+            {% if not previous_period_still_accepts %}(closed){% endif %}
+          </p>
+          <p>
+            {% if previous_period_still_accepts %}
+              This audit period still accepts submissions, but the
+              <strong>{{ current_audit_period.display_name }}</strong> audit year has now started.
+            {% else %}
+              This audit period is now closed and submissions are no longer accepted.
+            {% endif %}
+          </p>
+        </div>
+        {% if previous_period_still_accepts %}
+          {% if perms.npda.can_submit_csv %}
+            <a href="{{ upload_url_for_current_period }}"
+               class="btn btn-sm rounded-md bg-rcpch_light_blue border-rcpch_light_blue text-white hover:bg-rcpch_dark_blue">
+              <i class="fa-solid fa-file-arrow-up"></i>
+              Submit data for {{ current_audit_period.display_name }}
+            </a>
+          {% else %}
+            <button disabled
+                    class="btn btn-sm rounded-md"
+                    title="You do not have permission to submit CSV data">
+              <i class="fa-solid fa-file-arrow-up"></i>
+              Submit data for {{ current_audit_period.display_name }}
+            </button>
+          {% endif %}
+        {% endif %}
+      </div>
+    {% endif %}
+    <p class="grow-0 text-xs text-rcpch_dark_grey">
+      <i class="fa-solid fa-circle-info"></i>
+      Calculated at {{ current_datetime }}. This data has not been validated by the NPDA team.
+    </p>
+  </div>
+</header>

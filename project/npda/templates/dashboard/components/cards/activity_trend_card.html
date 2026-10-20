@@ -1,0 +1,30 @@
+{% extends 'dashboard/components/bases/base_card.html' %}
+{% load npda_tags %}
+{% block card_title %}Quarterly trend{% endblock card_title %}
+{% block card_body %}
+  {% csrf_token %}
+  <form class="filter mb-3 hidden" id="scatter-plot-select">
+    {% for scatter_plot_select in scatter_plot_select_list %}
+      <input class="btn btn-sm"
+             type="radio"
+             name="scatter_plot_select"
+             hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+             hx-post="{% data_url 'pdu-get-metric-scatter-plot' %}"
+             hx-swap="innerHTML"
+             hx-target="#scatter-plot"
+             hx-trigger="click"
+             aria-label="{{ scatter_plot_select.title }}"
+             value="{{ scatter_plot_select.name }}"
+             {% if scatter_plot_select.selected %}checked{% endif %} />
+    {% endfor %}
+  </form>
+  <div hx-get="{% data_url 'pdu-get-metric-scatter-plot' %}"
+       hx-vals='{ "data" : {{ charts.new_diagnoses_per_quarter_value_counts_pct.data }} }'
+       hx-trigger="load"
+       hx-swap="innerHTML"
+       hx-target="#scatter-plot"
+       _="on htmx:afterRequest remove #loading-spinner-scatter-plot then remove .hidden from #scatter-plot-select">
+  </div>
+  <div id="scatter-plot"></div>
+  {% include 'dashboard/loading_spinner.html' with spinner_id="loading-spinner-scatter-plot" %}
+{% endblock card_body %}
