@@ -123,7 +123,7 @@ The same methodology applies to carbohydrate counting, though the threshold is 1
 - Number of admissions
 - Number of DKA admissions
 
-This category relates only to patients that have had a hospital admission during the audit period, but excluding the first 90 days after diagnosis. There are no flags as seen in Health Checks, only the values listed. The counts are totals during the audit period.
+This category relates only to patients that have had a hospital admission during the audit period. All diabetes types are included (not just T1DM), and patients aged 25 or over at the start of the audit period are excluded. The patient list must match `count_admissions()` (KPI 46), which powers the "Hospital Admissions" panel in the unit report — the number of rows here equals the count shown there. Admissions within the first 90 days after diagnosis are counted; only the HbA1c values exclude measurements from that window. There are no flags as seen in Health Checks, only the values listed. The counts are totals during the audit period.
 
 **Dataset field mapping:**
 
@@ -242,7 +242,8 @@ This should involve:
 
 ##### Admissions
 
-- Filter to patients with at least one admission in the audit period, excluding the first 90 days after diagnosis.
+- All diabetes types (`build_base_queryset(type1_only=False)`); patients under 25 at the start of the audit period only.
+- Filter to patients with at least one admission in the audit period. Admissions within the first 90 days after diagnosis are included, so the row count matches KPI 46 / `count_admissions()` and the dashboard "Hospital Admissions" panel.
 - Number of admissions: `Count` visits with admission start or discharge date in audit range and valid admission reason.
 - Number of DKA admissions: `Count` visits with admission reason = DKA in audit range.
 - Mean/median HbA1c: compute from valid visits excluding the first 90 days post-diagnosis.

@@ -10,6 +10,7 @@ from project.npda.general_functions.patient_report.queries import (
     annotate_admissions,
     annotate_health_checks,
     build_base_queryset,
+    count_admissions,
 )
 from project.npda.models import AuditPeriod, NPDAUser, Submission, Transfer
 from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
@@ -750,7 +751,7 @@ class TestPatientReportAdmissionQueries:
         ],
         ids=["2021", "2026"],
     )
-    def test_admission_too_soon_after_diagnosis_excluded(
+    def test_admission_within_90_days_of_diagnosis_counted(
         self,
         get_audit_period,
         stabilisation_code,
@@ -760,7 +761,12 @@ class TestPatientReportAdmissionQueries:
         seed_users_fixture,
         seed_audit_periods_fixture,
     ):
-        """Test that admissions within 90 days of diagnosis are excluded."""
+        """Admissions within 90 days of diagnosis are counted.
+
+        KPI 46 (and count_admissions) apply no 90-day post-diagnosis exclusion,
+        so the patient report Admissions tab must include them for its row
+        count to match the "Hospital Admissions" panel in the unit report.
+        """
         user, pdu = self._get_user_and_pdu()
         audit_period = get_audit_period()
 
@@ -770,7 +776,7 @@ class TestPatientReportAdmissionQueries:
             date_of_birth=audit_period.start_date - relativedelta(years=15),
             diagnosis_date=audit_period.start_date + relativedelta(days=10),
         )
-        # Admission only 60 days after diagnosis (should be excluded)
+        # Admission only 60 days after diagnosis
         visit_kwargs = {
             "patient": patient,
             "visit_date": audit_period.start_date + relativedelta(days=70),
@@ -788,11 +794,19 @@ class TestPatientReportAdmissionQueries:
         qs = annotate_admissions(
             build_base_queryset(pdu, audit_period, type1_only=False), audit_period
         )
-        rows = {row["pk"]: row for row in qs}
+        rows = {
+            row["pk"]: row
+            for row in qs.values(
+                "pk", "number_of_admissions", "number_of_dka_admissions"
+            )
+        }
 
-        assert patient.pk not in rows, (
-            "Admission within 90 days of diagnosis should be excluded"
+        assert patient.pk in rows, (
+            "Admission within 90 days of diagnosis should be counted "
+            "(parity with count_admissions / KPI 46)"
         )
+        assert rows[patient.pk]["number_of_admissions"] == 1
+        assert rows[patient.pk]["number_of_dka_admissions"] == 0
 
     @pytest.mark.parametrize(
         "get_audit_period,stabilisation_code,dka_code,is_2026",
@@ -869,3 +883,166 @@ class TestPatientReportAdmissionQueries:
         assert rows[patient.pk]["number_of_dka_admissions"] == 1, (
             "Only DKA admission should be counted in DKA field"
         )
+
+    @pytest.mark.parametrize(
+        "get_audit_period,stabilisation_code,dka_code,is_2026",
+        [
+            (_get_audit_period_2021.__func__, 1, 2, False),  # 2021 dataset
+            (_get_audit_period_2026.__func__, 5, 1, True),  # 2026 dataset
+        ],
+        ids=["2021", "2026"],
+    )
+    def test_patient_aged_25_or_over_excluded(
+        self,
+        get_audit_period,
+        stabilisation_code,
+        dka_code,
+        is_2026,
+        seed_groups_fixture,
+        seed_users_fixture,
+        seed_audit_periods_fixture,
+    ):
+        """Patients aged 25 or over at audit period start are excluded.
+
+        Mirrors the KPI 1 eligibility filter in count_admissions().
+        """
+        user, pdu = self._get_user_and_pdu()
+        audit_period = get_audit_period()
+
+        patient = PatientFactory(
+            nhs_number=f"800{8 if not is_2026 else 18}888888",
+            diabetes_type=DIABETES_TYPES[0][0],
+            # Exactly 25 at the start of the audit period
+            date_of_birth=audit_period.start_date - relativedelta(years=25),
+            diagnosis_date=audit_period.start_date - relativedelta(days=200),
+        )
+        visit_kwargs = {
+            "patient": patient,
+            "visit_date": audit_period.start_date + relativedelta(days=50),
+            "hospital_admission_date": audit_period.start_date + relativedelta(days=50),
+            "hospital_discharge_date": audit_period.start_date + relativedelta(days=55),
+        }
+        if is_2026:
+            visit_kwargs["hospital_admission_reason_2026"] = stabilisation_code
+        else:
+            visit_kwargs["hospital_admission_reason"] = stabilisation_code
+        VisitFactory(**visit_kwargs)
+
+        self._create_submission(pdu, audit_period, user, [patient])
+
+        qs = annotate_admissions(
+            build_base_queryset(pdu, audit_period, type1_only=False), audit_period
+        )
+        rows = {row["pk"]: row for row in qs}
+
+        assert patient.pk not in rows, (
+            "Patients aged 25 or over at audit period start should be excluded"
+        )
+
+    @pytest.mark.parametrize(
+        "get_audit_period,stabilisation_code,dka_code,is_2026",
+        [
+            (_get_audit_period_2021.__func__, 1, 2, False),  # 2021 dataset
+            (_get_audit_period_2026.__func__, 5, 1, True),  # 2026 dataset
+        ],
+        ids=["2021", "2026"],
+    )
+    def test_admissions_tab_matches_count_admissions(
+        self,
+        get_audit_period,
+        stabilisation_code,
+        dka_code,
+        is_2026,
+        seed_groups_fixture,
+        seed_users_fixture,
+        seed_audit_periods_fixture,
+    ):
+        """The Admissions tab lists exactly the patients counted by count_admissions.
+
+        count_admissions powers the "Hospital Admissions" panel in the unit
+        report, so the number of rows in the patient report Admissions tab
+        must equal it: all diabetes types, under 25 at audit period start,
+        admissions within 90 days of diagnosis included.
+        """
+        user, pdu = self._get_user_and_pdu()
+        audit_period = get_audit_period()
+
+        def admission_visit(patient, **kwargs):
+            visit_kwargs = {
+                "patient": patient,
+                "visit_date": audit_period.start_date + relativedelta(days=50),
+                "hospital_admission_date": audit_period.start_date
+                + relativedelta(days=50),
+                "hospital_discharge_date": audit_period.start_date
+                + relativedelta(days=55),
+            }
+            if is_2026:
+                visit_kwargs["hospital_admission_reason_2026"] = kwargs["reason"]
+            else:
+                visit_kwargs["hospital_admission_reason"] = kwargs["reason"]
+            VisitFactory(**visit_kwargs)
+
+        # Counted: T1DM patient admitted
+        admitted_t1dm = PatientFactory(
+            nhs_number=f"800{9 if not is_2026 else 19}999999",
+            diabetes_type=DIABETES_TYPES[0][0],
+            date_of_birth=audit_period.start_date - relativedelta(years=10),
+            diagnosis_date=audit_period.start_date - relativedelta(days=200),
+        )
+        admission_visit(admitted_t1dm, reason=stabilisation_code)
+
+        # Counted: non-T1DM patient admitted (all diabetes types)
+        admitted_t2dm = PatientFactory(
+            nhs_number=f"800{0 if not is_2026 else 10}000000",
+            diabetes_type=DIABETES_TYPES[1][0],
+            date_of_birth=audit_period.start_date - relativedelta(years=10),
+            diagnosis_date=audit_period.start_date - relativedelta(days=200),
+        )
+        admission_visit(admitted_t2dm, reason=dka_code)
+
+        # Counted: diagnosed during the audit year, admitted within 90 days
+        # of diagnosis
+        newly_diagnosed = PatientFactory(
+            nhs_number=f"800{1 if not is_2026 else 11}111111",
+            diabetes_type=DIABETES_TYPES[0][0],
+            date_of_birth=audit_period.start_date - relativedelta(years=10),
+            diagnosis_date=audit_period.start_date + relativedelta(days=10),
+        )
+        admission_visit(newly_diagnosed, reason=dka_code)
+
+        # Not counted: aged 25 at audit period start
+        over_25 = PatientFactory(
+            nhs_number=f"800{2 if not is_2026 else 12}222222",
+            diabetes_type=DIABETES_TYPES[0][0],
+            date_of_birth=audit_period.start_date - relativedelta(years=25),
+            diagnosis_date=audit_period.start_date - relativedelta(days=200),
+        )
+        admission_visit(over_25, reason=stabilisation_code)
+
+        # Not counted: visit but no admission
+        not_admitted = PatientFactory(
+            nhs_number=f"800{3 if not is_2026 else 13}333333",
+            diabetes_type=DIABETES_TYPES[0][0],
+            date_of_birth=audit_period.start_date - relativedelta(years=10),
+            diagnosis_date=audit_period.start_date - relativedelta(days=200),
+        )
+        VisitFactory(
+            patient=not_admitted,
+            visit_date=audit_period.start_date + relativedelta(days=50),
+        )
+
+        self._create_submission(
+            pdu,
+            audit_period,
+            user,
+            [admitted_t1dm, admitted_t2dm, newly_diagnosed, over_25, not_admitted],
+        )
+
+        qs = annotate_admissions(
+            build_base_queryset(pdu, audit_period, type1_only=False), audit_period
+        )
+        listed_pks = set(qs.values_list("pk", flat=True))
+
+        assert listed_pks == {admitted_t1dm.pk, admitted_t2dm.pk, newly_diagnosed.pk}
+        assert count_admissions(pdu, audit_period) == 3
+        assert qs.count() == count_admissions(pdu, audit_period)
