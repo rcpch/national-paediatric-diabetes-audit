@@ -347,6 +347,10 @@ def read_csv_from_str(contents, encoding="utf-8", dataset_year=None):
     with tempfile.NamedTemporaryFile() as f:
         # remove the daggers!
         contents = contents.replace("\u2020", "").replace("\u2021", "")
+        # remove the UTF-8 byte order mark if present (Excel adds one when
+        # saving CSVs). It cannot be encoded in ISO-8859-1, and pandas strips
+        # it when reading UTF-8 anyway.
+        contents = contents.removeprefix("\ufeff")
         f.write(contents.encode(encoding))
         f.seek(0)
 
@@ -1458,11 +1462,12 @@ def test_missing_columns_causes_error(
 
 
 @pytest.mark.django_db
-# The 2026 dummy sheet contains fixed dates that were in the future when it was
-# written (Date of leaving service 27/09/2026, Death Date 30/09/2026). These are
-# rejected by not_in_the_future_validator, so the number of errors depends on
-# the real-world clock. Freeze time so the assertion is deterministic.
-@freeze_time("2026-09-08")
+# The 2026 dummy sheet contains fixed dates (Date of leaving service 27/09/2026,
+# Death Date 20/10/2026). These are rejected by not_in_the_future_validator if
+# they are in the future, so the number of errors depends on the real-world
+# clock. Freeze time to after the latest date in the sheet so the assertion
+# is deterministic.
+@freeze_time("2026-11-01")
 def test_case_insensitive_column_headers(
     test_user, dummy_sheet_csv, audit_period_for_dataset_year, dataset_year
 ):
@@ -1478,10 +1483,7 @@ def test_case_insensitive_column_headers(
     errors = csv_upload_sync(
         test_user, parsed_csv.df, _audit_period=audit_period_for_dataset_year
     )
-    if dataset_year >= 2026:
-        assert len(errors) == 3
-    else:
-        assert len(errors) == 0
+    assert len(errors) == 0
 
 
 @pytest.mark.django_db
