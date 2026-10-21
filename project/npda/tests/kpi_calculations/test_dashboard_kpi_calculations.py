@@ -1009,9 +1009,9 @@ def test_count_admissions_includes_admission_within_90_days_of_diagnosis(
 ):
     """Admissions within 90 days of diagnosis ARE counted.
 
-    count_admissions mirrors KPI 46, which does not apply the 90-day exclusion
-    used in the patient-report's annotate_admissions(). That exclusion is
-    intentional only for the patient-report row-level view.
+    count_admissions mirrors KPI 46, which applies no 90-day exclusion —
+    and neither does the patient-report's annotate_admissions(), so the
+    patient report Admissions tab row count matches this count.
     """
     user, pdu = _get_user_and_pdu()
     audit_period = AuditPeriod.objects.get(slug="2024-2025")

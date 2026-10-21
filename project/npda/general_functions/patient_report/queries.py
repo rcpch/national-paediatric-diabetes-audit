@@ -528,6 +528,16 @@ def annotate_care_at_diagnosis(qs, audit_period):
 
 
 def annotate_admissions(qs, audit_period):
+    """Admissions for the patient report Admissions tab.
+
+    Must return the same patients as count_admissions() (KPI 46), which powers
+    the "Hospital Admissions" panel in the unit report: all diabetes types,
+    under 25 at the start of the audit period, at least one admission with a
+    valid reason and an admission or discharge date within the audit period.
+    Admissions within 90 days of diagnosis are included (KPI 46 has no such
+    exclusion); only the HbA1c values shown alongside exclude the first 90
+    days post-diagnosis.
+    """
     audit_range = (audit_period.start_date, audit_period.end_date)
     admission_reason_values = (
         [choice[0] for choice in HOSPITAL_ADMISSION_REASONS_2021]
@@ -548,10 +558,6 @@ def annotate_admissions(qs, audit_period):
             visit__hospital_admission_reason_2026__in=admission_reason_values
         )
     admission_filter &= Q(visit__visit_date__range=audit_range)
-    admission_filter &= Q(
-        visit__hospital_admission_date__gt=F("diagnosis_date")
-        + Value(timedelta(days=90))
-    )
 
     dka_filter = Q(
         Q(visit__hospital_admission_date__range=audit_range)
@@ -570,15 +576,19 @@ def annotate_admissions(qs, audit_period):
             ]  # DKA
         )
     dka_filter &= Q(visit__visit_date__range=audit_range)
-    dka_filter &= Q(
-        visit__hospital_admission_date__gt=F("diagnosis_date")
-        + Value(timedelta(days=90))
-    )
 
-    return qs.annotate(
-        number_of_admissions=Count("visit", filter=admission_filter, distinct=True),
-        number_of_dka_admissions=Count("visit", filter=dka_filter, distinct=True),
-    ).filter(Q(number_of_admissions__gt=0) | Q(number_of_dka_admissions__gt=0))
+    return (
+        qs.filter(
+            # KPI 1 eligibility: under 25 at the start of the audit period,
+            # as in count_admissions()
+            date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
+        )
+        .annotate(
+            number_of_admissions=Count("visit", filter=admission_filter, distinct=True),
+            number_of_dka_admissions=Count("visit", filter=dka_filter, distinct=True),
+        )
+        .filter(Q(number_of_admissions__gt=0) | Q(number_of_dka_admissions__gt=0))
+    )
 
 
 def annotate_treatment(qs, audit_period):
