@@ -120,17 +120,24 @@ The same methodology applies to carbohydrate counting, though the threshold is 1
 - NHS Number
 - Mean HbA1c mmol/mol (%)
 - Median HbA1c mmol/mol (%)
-- Number of admissions
-- Number of DKA admissions
+- Admissions not associated with diagnosis
+- Admissions - DKA at diagnosis
 
-This category relates only to patients that have had a hospital admission during the audit period. All diabetes types are included (not just T1DM), and patients aged 25 or over at the start of the audit period are excluded. The patient list must match `count_admissions()` (KPI 46), which powers the "Hospital Admissions" panel in the unit report — the number of rows here equals the count shown there. Admissions within the first 90 days after diagnosis are counted; only the HbA1c values exclude measurements from that window. There are no flags as seen in Health Checks, only the values listed. The counts are totals during the audit period.
+This category relates only to patients that have had a hospital admission during the audit period. All diabetes types are included (not just T1DM), and patients aged 25 or over at the start of the audit period are excluded. The patient list must match `count_admissions()` (KPI 46), which powers the "Hospital Admissions" panel in the unit report — the number of rows here equals the count shown there.
+
+Column definitions (published patient report):
+
+- **Admissions not associated with diagnosis**: count of admissions whose admission date is NOT within +/- 10 days of diagnosis.
+- **Admissions - DKA at diagnosis**: count of DKA admissions whose admission date IS within +/- 10 days of diagnosis.
+
+An admission within +/- 10 days of diagnosis that is not DKA appears in neither column, but the patient is still listed (they have had a valid admission). HbA1c values exclude measurements from the first 90 days post-diagnosis. There are no flags as seen in Health Checks, only the values listed. The counts are totals during the audit period.
 
 **Dataset field mapping:**
 
 | Column | 2021 field | 2026 field | Notes |
 |--------|------------|------------|-------|
-| Number of admissions | `hospital_admission_date` / `hospital_admission_reason` | same | Both datasets |
-| Number of DKA admissions | `hospital_admission_reason` (DKA value) | same | Both datasets |
+| Admissions not associated with diagnosis | `hospital_admission_date` / `hospital_admission_reason` | same | Both datasets; excludes admissions within +/- 10 days of diagnosis |
+| Admissions - DKA at diagnosis | `hospital_admission_reason` (DKA value) | same | Both datasets; DKA admissions within +/- 10 days of diagnosis only |
 | Initial pH at admission | *(absent)* | `blood_gas_ph` | 2026 only; display value from DKA visit |
 | Initial bicarbonate at admission | *(absent)* | `blood_gas_bicarbonate` | 2026 only; display value from DKA visit |
 
@@ -243,9 +250,9 @@ This should involve:
 ##### Admissions
 
 - All diabetes types (`build_base_queryset(type1_only=False)`); patients under 25 at the start of the audit period only.
-- Filter to patients with at least one admission in the audit period. Admissions within the first 90 days after diagnosis are included, so the row count matches KPI 46 / `count_admissions()` and the dashboard "Hospital Admissions" panel.
-- Number of admissions: `Count` visits with admission start or discharge date in audit range and valid admission reason.
-- Number of DKA admissions: `Count` visits with admission reason = DKA in audit range.
+- Filter to patients with at least one valid admission in the audit period (any timing relative to diagnosis), so the row count matches KPI 46 / `count_admissions()` and the dashboard "Hospital Admissions" panel.
+- Admissions not associated with diagnosis: `Count` visits with a valid admission reason and admission/discharge date in the audit range whose admission date is NOT within +/- 10 days of diagnosis.
+- Admissions - DKA at diagnosis: `Count` visits with a valid admission reason and admission/discharge date in the audit range whose admission date IS within +/- 10 days of diagnosis AND whose reason is DKA.
 - Mean/median HbA1c: compute from valid visits excluding the first 90 days post-diagnosis.
 - TODO: initial pH and bicarbonate are pending data model; leave code comments for later.
 

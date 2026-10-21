@@ -1,7 +1,7 @@
 {% extends "patient_report/base_table.html" %}
 {% load npda_tags %}
 {% block description_box %}
-  {% include "patient_report/description_box.html" with description="Admissions are presented below for all children and young people. HbA1c excludes all measurements taken in the first 90 days after diagnosis." proportion="admitted to hospital (for any reason) in the audit year" extra="Note: this list is filtered to include only children and young people who have had an inpatient admission in the audit period." %}
+  {% include "patient_report/description_box.html" with description="Admissions are presented below for all children and young people. 'Admissions not associated with diagnosis' counts admissions not within +/- 10 days of diagnosis. 'Admissions - DKA at diagnosis' counts DKA admissions within +/- 10 days of diagnosis. HbA1c excludes all measurements taken in the first 90 days after diagnosis." proportion="admitted to hospital (for any reason) in the audit year" extra="Note: this list is filtered to include only children and young people who have had an inpatient admission in the audit period. The number of patients shown here matches the Hospital Admissions panel in the unit report." %}
 {% endblock %}
 {% block table_headers %}
   <th class="whitespace-normal break-words">
@@ -60,7 +60,7 @@
     </div>
   </th>
   <th class="whitespace-normal break-words">
-    Number of admissions
+    Admissions not associated with diagnosis
     <div class="block">
       <span hx-get="?category=admissions&sort=number_of_admissions&order=asc"
             hx-target="#table-area"
@@ -77,7 +77,7 @@
     </div>
   </th>
   <th class="whitespace-normal break-words">
-    Number of DKA admissions
+    Admissions - DKA at diagnosis
     <div class="block">
       <span hx-get="?category=admissions&sort=number_of_dka_admissions&order=asc"
             hx-target="#table-area"
