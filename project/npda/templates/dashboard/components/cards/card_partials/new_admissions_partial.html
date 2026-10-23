@@ -1,2 +1,11 @@
-<span class="text-xl font-bold text-rcpch_dark_blue">{{ n_admissions_this_month }}</span>
-<span class="text-xs text-rcpch_pink">(N / month)</span>
+{% load npda_tags %}
+<div class="flex items-center justify-between w-full gap-2">
+  <div class="flex flex-col items-center">
+    <span class="text-xl font-bold text-rcpch_dark_blue">{{ n_admissions_outside_dx }}</span>
+    <span class="text-xs text-rcpch_pink tooltip">unrelated to dx</span>
+  </div>
+  <div class="flex flex-col items-center">
+    <span class="text-xl font-bold text-rcpch_dark_blue">{{ n_dka_admissions_at_dx }}</span>
+    <span class="text-xs text-rcpch_pink tooltip">DKA at dx</span>
+  </div>
+</div>

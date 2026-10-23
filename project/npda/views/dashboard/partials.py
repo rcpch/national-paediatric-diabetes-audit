@@ -16,7 +16,7 @@ from project.npda.general_functions.map import (
     get_children_by_pdu_audit_year,
 )
 from project.npda.general_functions.patient_report.queries import (
-    count_admissions,
+    count_admissions_by_diagnosis_relationship,
     count_admissions_by_quarter,
     count_cgm_use,
     count_hcl_use,
@@ -334,15 +334,25 @@ def get_new_diagnoses_partial(request, audit_period, pdu):
 @login_and_otp_required()
 @check_data_permissions()
 def get_new_admissions_partial(request, audit_period, pdu):
-    """HTMX view that returns the number of new admissions for the current audit period"""
+    """HTMX view that returns the number of new admissions for the current audit period.
 
-    n_admissions = count_admissions(pdu, audit_period)
+    Two numbers, matching the patient report Admissions tab column totals:
+    admissions outside the +/- 10 day diagnosis window ("outside dx") and
+    DKA admissions within it ("dka at dx").
+    """
 
-    context = {"number": n_admissions, "units": "children"}
+    n_admissions_outside_dx, n_dka_admissions_at_dx = (
+        count_admissions_by_diagnosis_relationship(pdu, audit_period)
+    )
+
+    context = {
+        "n_admissions_outside_dx": n_admissions_outside_dx,
+        "n_dka_admissions_at_dx": n_dka_admissions_at_dx,
+    }
 
     return render(
         request,
-        "dashboard/components/cards/card_partials/secondary_card_partial.html",
+        "dashboard/components/cards/card_partials/new_admissions_partial.html",
         context,
     )
 

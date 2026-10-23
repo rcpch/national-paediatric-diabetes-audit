@@ -1099,6 +1099,88 @@ def count_admissions(pdu, audit_period) -> int:
     )
 
 
+def count_admissions_by_diagnosis_relationship(pdu, audit_period) -> tuple[int, int]:
+    """Counts of admissions by their relationship to diagnosis.
+
+    Mirrors the patient report Admissions tab columns (annotate_admissions):
+    - outside dx: admissions whose admission date is NOT within +/- 10 days
+      of diagnosis ("Admissions not associated with diagnosis")
+    - dka at dx: DKA admissions whose admission date IS within +/- 10 days
+      of diagnosis ("Admissions - DKA at diagnosis")
+
+    Both are admission (visit) counts — the unit report panel shows the
+    totals of the patient report tab columns — with the same eligibility
+    as count_admissions() (KPI 46): all diabetes types (no T1DM filter),
+    under 25 at the start of the audit period, valid admission reason,
+    admission or discharge date within the audit period. The two counts do
+    not sum to count_admissions()' patients: a patient can contribute to
+    both (an unrelated admission AND a DKA admission at diagnosis) or to
+    neither (a non-DKA admission within +/- 10 days of diagnosis counts in
+    neither).
+
+    Both totals come from a single aggregate query (one round trip).
+    """
+    audit_range = (audit_period.start_date, audit_period.end_date)
+    if audit_period.get_dataset_year() < 2026:
+        valid_reasons = [choice[0] for choice in HOSPITAL_ADMISSION_REASONS_2021]
+        reason_field = "hospital_admission_reason"
+        dka_reason = HOSPITAL_ADMISSION_REASONS_2021[1][0]  # DKA
+    else:
+        valid_reasons = [choice[0] for choice in HOSPITAL_ADMISSION_REASONS_2026]
+        reason_field = "hospital_admission_reason_2026"
+        dka_reason = HOSPITAL_ADMISSION_REASONS_2026[0][0]  # Acute DKA
+
+    base_qs = Visit.objects.filter(
+        patient__submissions__submission_active=True,
+        patient__submissions__audit_period=audit_period,
+        patient__submissions__paediatric_diabetes_unit=pdu,
+        visit_date__range=audit_range,
+        patient__date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
+    ).distinct()
+
+    valid_admission = Q(**{f"{reason_field}__in": valid_reasons}) & Q(
+        Q(hospital_admission_date__range=audit_range)
+        | Q(hospital_discharge_date__range=audit_range)
+    )
+
+    # The diagnosis window is the 10 days either side of diagnosis,
+    # on the admission date (as in annotate_admissions)
+    within_10_days_of_diagnosis = Q(
+        hospital_admission_date__gte=F("patient__diagnosis_date")
+        - Value(timedelta(days=10))
+    ) & Q(
+        hospital_admission_date__lte=F("patient__diagnosis_date")
+        + Value(timedelta(days=10))
+    )
+    outside_10_days_of_diagnosis = Q(
+        Q(
+            hospital_admission_date__lt=F("patient__diagnosis_date")
+            - Value(timedelta(days=10))
+        )
+        | Q(
+            hospital_admission_date__gt=F("patient__diagnosis_date")
+            + Value(timedelta(days=10))
+        )
+    )
+
+    totals = base_qs.aggregate(
+        outside_dx=Count(
+            "pk",
+            distinct=True,
+            filter=valid_admission & outside_10_days_of_diagnosis,
+        ),
+        dka_at_dx=Count(
+            "pk",
+            distinct=True,
+            filter=valid_admission
+            & within_10_days_of_diagnosis
+            & Q(**{reason_field: dka_reason}),
+        ),
+    )
+
+    return totals["outside_dx"], totals["dka_at_dx"]
+
+
 def count_admissions_by_quarter(pdu, audit_period) -> dict:
     """Hospital admissions split by quarter.
 

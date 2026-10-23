@@ -60,6 +60,7 @@ The dashboard views also use `queries.py` directly — **do not reach for the KP
 | `count_pump_use`                       | `tuple[int, int]` | `(passed, eligible)` — 2021/2026 aware                                                                                     |
 | `count_cgm_use`                        | `tuple[int, int]` | `(passed, eligible)` — 2021/2026 aware                                                                                     |
 | `count_admissions`                     | `int`             | Total admissions count                                                                                                     |
+| `count_admissions_by_diagnosis_relationship` | `tuple[int, int]` | `(outside_dx, dka_at_dx)` — total admissions outside the ±10-day diagnosis window, and DKA admissions within it; totals of the patient report Admissions tab columns |
 | `count_admissions_by_quarter`          | `dict[int, dict]` | Quarter-stratified admissions                                                                                              |
 | `count_service_transitions_by_quarter` | `dict[int, dict]` | Quarter-stratified adult-service transitions                                                                               |
 | `hba1c_stats_by_diabetes_type`         | `dict`            | `{all, t1dm, t2dm, other}` each with `mean_mmol_mol`, `median_mmol_mol`, `mean_percent`, `median_percent`; 2021/2026 aware |
