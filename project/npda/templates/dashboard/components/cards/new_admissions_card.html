@@ -2,9 +2,8 @@
 {% load npda_tags %}
 {% block card_title %}
     Hospital Admissions
-    {% include 'common/docs_icon_link_button.html' with rel_url="developer/kpis/outcomes/#46-number-of-admissions" fa_icon_class="fa-solid fa-eye" %}
     <span class="text-rcpch_pink tooltip"
-          data-tip="Patients with diabetes admitted to hospital this audit year, split by relationship to diagnosis: admissions outside +/- 10 days of diagnosis, and DKA admissions within it"><i class="fa-solid fa-chart-line"></i></span>
+          data-tip="Total admissions split by relationship to diagnosis: admissions outside +/- 10 days of diagnosis, and DKA admissions within that time"><i class="fa-solid fa-chart-line"></i></span>
 {% endblock %}
 {% block card_content %}
     <div hx-get="{% data_url 'pdu-get-new-admissions-partial' %}"
