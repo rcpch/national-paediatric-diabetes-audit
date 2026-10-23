@@ -237,8 +237,8 @@ def test_new_admissions_partial_splits_by_diagnosis_relationship(
     assert response.status_code == HTTPStatus.OK
     assert response.context["n_admissions_outside_dx"] == 2
     assert response.context["n_dka_admissions_at_dx"] == 0
-    assert b"outside dx" in response.content
-    assert b"dka at dx" in response.content
+    assert b"unrelated to dx" in response.content
+    assert b"DKA at dx" in response.content
 
 
 @pytest.mark.parametrize(
