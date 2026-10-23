@@ -530,13 +530,23 @@ def annotate_care_at_diagnosis(qs, audit_period):
 def annotate_admissions(qs, audit_period):
     """Admissions for the patient report Admissions tab.
 
-    Must return the same patients as count_admissions() (KPI 46), which powers
-    the "Hospital Admissions" panel in the unit report: all diabetes types,
-    under 25 at the start of the audit period, at least one admission with a
-    valid reason and an admission or discharge date within the audit period.
-    Admissions within 90 days of diagnosis are included (KPI 46 has no such
-    exclusion); only the HbA1c values shown alongside exclude the first 90
-    days post-diagnosis.
+    Rows: every patient with at least one valid admission in the audit period
+    (valid reason, admission or discharge date within the audit range), all
+    diabetes types, under 25 at the start of the audit period — matching
+    count_admissions() (KPI 46), which powers the "Hospital Admissions"
+    panel in the unit report.
+
+    Columns follow the published patient report definitions:
+    - number_of_admissions, "Admissions not associated with diagnosis":
+      admissions whose admission date is NOT within +/- 10 days of diagnosis.
+    - number_of_dka_admissions, "Admissions - DKA at diagnosis":
+      DKA admissions whose admission date IS within +/- 10 days of diagnosis.
+
+    An admission within +/- 10 days of diagnosis that is not DKA falls into
+    neither column, but the patient is still listed (they have had a valid
+    admission). Admissions with no admission date fall into neither column
+    either. HbA1c values shown alongside exclude measurements from the first
+    90 days post-diagnosis (see calculate_hba1c_values).
     """
     audit_range = (audit_period.start_date, audit_period.end_date)
     admission_reason_values = (
@@ -545,37 +555,52 @@ def annotate_admissions(qs, audit_period):
         else [choice[0] for choice in HOSPITAL_ADMISSION_REASONS_2026]
     )  # Exclude 'Not admitted' reason for 2026 onwards
 
-    admission_filter = Q(
+    # Every counted admission must have a valid reason, an admission or
+    # discharge date within the audit period, and a visit within the audit
+    # period (as in count_admissions / KPI 46).
+    valid_admission = Q(
         Q(visit__hospital_admission_date__range=audit_range)
         | Q(visit__hospital_discharge_date__range=audit_range)
     )
     if audit_period.get_dataset_year() < 2026:
-        admission_filter &= Q(
+        valid_admission &= Q(
             visit__hospital_admission_reason__in=admission_reason_values
         )
-    elif audit_period.get_dataset_year() >= 2026:
-        admission_filter &= Q(
-            visit__hospital_admission_reason_2026__in=admission_reason_values
-        )
-    admission_filter &= Q(visit__visit_date__range=audit_range)
-
-    dka_filter = Q(
-        Q(visit__hospital_admission_date__range=audit_range)
-        | Q(visit__hospital_discharge_date__range=audit_range)
-    )
-    if audit_period.get_dataset_year() < 2026:
-        dka_filter &= Q(
+        dka_reason = Q(
             visit__hospital_admission_reason=HOSPITAL_ADMISSION_REASONS_2021[1][
                 0
             ]  # DKA
         )
-    elif audit_period.get_dataset_year() >= 2026:
-        dka_filter &= Q(
+    else:
+        valid_admission &= Q(
+            visit__hospital_admission_reason_2026__in=admission_reason_values
+        )
+        dka_reason = Q(
             visit__hospital_admission_reason_2026=HOSPITAL_ADMISSION_REASONS_2026[0][
                 0
-            ]  # DKA
+            ]  # Acute DKA
         )
-    dka_filter &= Q(visit__visit_date__range=audit_range)
+    valid_admission &= Q(visit__visit_date__range=audit_range)
+
+    # The diagnosis window is the 10 days either side of diagnosis,
+    # on the admission date.
+    within_10_days_of_diagnosis = Q(
+        visit__hospital_admission_date__gte=F("diagnosis_date")
+        - Value(timedelta(days=10))
+    ) & Q(
+        visit__hospital_admission_date__lte=F("diagnosis_date")
+        + Value(timedelta(days=10))
+    )
+    outside_10_days_of_diagnosis = Q(
+        Q(
+            visit__hospital_admission_date__lt=F("diagnosis_date")
+            - Value(timedelta(days=10))
+        )
+        | Q(
+            visit__hospital_admission_date__gt=F("diagnosis_date")
+            + Value(timedelta(days=10))
+        )
+    )
 
     return (
         qs.filter(
@@ -583,11 +608,25 @@ def annotate_admissions(qs, audit_period):
             # as in count_admissions()
             date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
         )
-        .annotate(
-            number_of_admissions=Count("visit", filter=admission_filter, distinct=True),
-            number_of_dka_admissions=Count("visit", filter=dka_filter, distinct=True),
+        .filter(
+            # Any valid admission keeps the patient listed, so the row count
+            # matches count_admissions() (KPI 46) / the unit report panel
+            valid_admission,
         )
-        .filter(Q(number_of_admissions__gt=0) | Q(number_of_dka_admissions__gt=0))
+        .annotate(
+            # "Admissions not associated with diagnosis"
+            number_of_admissions=Count(
+                "visit",
+                filter=valid_admission & outside_10_days_of_diagnosis,
+                distinct=True,
+            ),
+            # "Admissions - DKA at diagnosis"
+            number_of_dka_admissions=Count(
+                "visit",
+                filter=valid_admission & within_10_days_of_diagnosis & dka_reason,
+                distinct=True,
+            ),
+        )
     )
 
 
