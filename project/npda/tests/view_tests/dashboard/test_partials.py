@@ -10,6 +10,7 @@ from dateutil.relativedelta import relativedelta
 from django.urls import reverse
 
 from project.constants.diabetes_types import DIABETES_TYPES
+from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS_2021
 from project.constants.leave_pdu_reasons import LEAVE_PDU_REASONS
 
 # E12 imports
@@ -189,6 +190,55 @@ def test_moved_out_of_area_includes_patients_without_visits(
 
     assert response.status_code == HTTPStatus.OK
     assert response.context["number"] == 1
+
+
+@pytest.mark.django_db
+def test_new_admissions_partial_splits_by_diagnosis_relationship(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """The Hospital Admissions panel shows the two admission totals from
+    count_admissions_by_diagnosis_relationship: admissions outside the
+    +/- 10 day diagnosis window, and DKA admissions within it.
+    """
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+    start = audit_period.start_date
+
+    user, patient = setup(
+        audit_period,
+        patient_args={
+            # Diagnosed 200 days before the audit period: admissions within
+            # the audit period are outside the +/- 10 day diagnosis window
+            "diagnosis_date": start - relativedelta(days=200),
+        },
+    )
+
+    # Two admissions for the same patient: the panel shows admission totals
+    for admission_date in (
+        start + relativedelta(days=50),
+        start + relativedelta(days=100),
+    ):
+        VisitFactory(
+            patient=patient,
+            visit_date=admission_date,
+            hospital_admission_date=admission_date,
+            hospital_discharge_date=admission_date + relativedelta(days=3),
+            hospital_admission_reason=HOSPITAL_ADMISSION_REASONS_2021[0][0],
+        )
+
+    client = login_and_verify_user(client, user)
+
+    response = client.get(
+        reverse(
+            "pdu-get-new-admissions-partial",
+            kwargs={"audit_period": audit_period.slug, "pz_code": ALDER_HEY_PZ_CODE},
+        )
+    )
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.context["n_admissions_outside_dx"] == 2
+    assert response.context["n_dka_admissions_at_dx"] == 0
+    assert b"outside dx" in response.content
+    assert b"dka at dx" in response.content
 
 
 @pytest.mark.parametrize(

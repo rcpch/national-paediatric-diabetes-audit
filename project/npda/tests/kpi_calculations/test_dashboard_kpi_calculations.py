@@ -12,6 +12,7 @@ is expected and intentional.
 """
 
 import logging
+from datetime import date
 
 import pytest
 from dateutil.relativedelta import relativedelta
@@ -19,9 +20,14 @@ from dateutil.relativedelta import relativedelta
 from project.constants.closed_loop_types import CLOSED_LOOP_TYPES
 from project.constants.diabetes_types import DIABETES_TYPES
 from project.constants.glucose_monitoring_types import GLUCOSE_MONITORING_TYPES
-from project.constants.hospital_admission_reasons import HOSPITAL_ADMISSION_REASONS_2021
+from project.constants.hospital_admission_reasons import (
+    HOSPITAL_ADMISSION_REASONS_2021,
+)
 from project.npda.general_functions.patient_report.queries import (
+    annotate_admissions,
+    build_base_queryset,
     count_admissions,
+    count_admissions_by_diagnosis_relationship,
     count_cgm_use,
     count_eligible_patients,
     count_hcl_use,
@@ -1036,6 +1042,167 @@ def test_count_admissions_includes_admission_within_90_days_of_diagnosis(
 
     # KPI 46 counts this — no 90-day exclusion
     assert count_admissions(pdu, audit_period) == 1
+
+
+# ---------------------------------------------------------------------------
+# count_admissions_by_diagnosis_relationship
+# ---------------------------------------------------------------------------
+
+
+def _get_audit_period_2021():
+    """2021-dataset audit period (2024-2025)."""
+    return AuditPeriod.objects.get(slug="2024-2025")
+
+
+def _get_audit_period_2026():
+    """First 2026-dataset audit period (start_date >= 2026-04-01), if seeded."""
+    ap = AuditPeriod.objects.filter(start_date__gte=date(2026, 4, 1)).first()
+    if not ap:
+        pytest.skip("No 2026 audit period available")
+    return ap
+
+
+@pytest.mark.parametrize(
+    "get_audit_period,stabilisation_code,dka_code,is_2026",
+    [
+        pytest.param(_get_audit_period_2021, 1, 2, False, id="2021"),
+        pytest.param(_get_audit_period_2026, 5, 1, True, id="2026"),
+    ],
+)
+@pytest.mark.django_db
+def test_count_admissions_by_diagnosis_relationship(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+    get_audit_period,
+    stabilisation_code,
+    dka_code,
+    is_2026,
+):
+    """Admissions are split into 'outside dx' and 'dka at dx' totals.
+
+    outside dx: admissions NOT within +/- 10 days of diagnosis. dka at dx:
+    DKA admissions within +/- 10 days of diagnosis. A non-DKA admission
+    within the window counts in neither. Both are admission (visit) counts
+    — the totals of the patient report tab columns — with count_admissions()
+    (KPI 46) eligibility: all diabetes types (no T1DM filter), under 25 at
+    audit period start.
+    """
+    user, pdu = _get_user_and_pdu()
+    audit_period = get_audit_period()
+    start = audit_period.start_date
+    visit_date = start + relativedelta(days=50)
+
+    def admission_visit(patient, *, reason, admission_date):
+        kwargs = {
+            "patient": patient,
+            "visit_date": admission_date,
+            "hospital_admission_date": admission_date,
+            "hospital_discharge_date": admission_date + relativedelta(days=3),
+        }
+        if is_2026:
+            kwargs["hospital_admission_reason_2026"] = reason
+        else:
+            kwargs["hospital_admission_reason"] = reason
+        VisitFactory(**kwargs)
+
+    # outside dx: two stabilisation admissions 250 days after diagnosis
+    # (two admissions for one patient, so the totals are not patient counts)
+    outside_dx = PatientFactory(
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=start - relativedelta(years=10),
+        diagnosis_date=start - relativedelta(days=200),
+    )
+    admission_visit(
+        outside_dx,
+        reason=stabilisation_code,
+        admission_date=visit_date,
+    )
+    admission_visit(
+        outside_dx,
+        reason=stabilisation_code,
+        admission_date=start + relativedelta(days=100),
+    )
+
+    # dka at dx: DKA admission 5 days after diagnosis
+    dka_at_dx = PatientFactory(
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=start - relativedelta(years=10),
+        diagnosis_date=start + relativedelta(days=45),
+    )
+    admission_visit(
+        dka_at_dx,
+        reason=dka_code,
+        admission_date=visit_date,
+    )
+
+    # neither: non-DKA admission 5 days after diagnosis
+    non_dka_at_dx = PatientFactory(
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=start - relativedelta(years=10),
+        diagnosis_date=start + relativedelta(days=45),
+    )
+    admission_visit(
+        non_dka_at_dx,
+        reason=stabilisation_code,
+        admission_date=visit_date,
+    )
+
+    # outside dx (not dka at dx): DKA admission 60 days after diagnosis
+    dka_outside_dx = PatientFactory(
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=start - relativedelta(years=10),
+        diagnosis_date=start + relativedelta(days=10),
+    )
+    admission_visit(
+        dka_outside_dx,
+        reason=dka_code,
+        admission_date=start + relativedelta(days=70),
+    )
+
+    # outside dx: non-T1DM patient with an admission — the counts include
+    # all diabetes types (no T1DM filter), as in count_admissions() (KPI 46)
+    t2dm_outside_dx = PatientFactory(
+        diabetes_type=DIABETES_TYPES[1][0],
+        date_of_birth=start - relativedelta(years=10),
+        diagnosis_date=start - relativedelta(days=200),
+    )
+    admission_visit(
+        t2dm_outside_dx,
+        reason=stabilisation_code,
+        admission_date=visit_date,
+    )
+
+    # neither: visit but no admission
+    not_admitted = PatientFactory(
+        diabetes_type=DIABETES_TYPES[0][0],
+        date_of_birth=start - relativedelta(years=10),
+        diagnosis_date=start - relativedelta(days=200),
+    )
+    VisitFactory(patient=not_admitted, visit_date=visit_date)
+
+    submission = _create_submission(user, pdu, audit_period)
+    submission.patients.add(
+        outside_dx,
+        dka_at_dx,
+        non_dka_at_dx,
+        dka_outside_dx,
+        t2dm_outside_dx,
+        not_admitted,
+    )
+
+    # outside dx: 2 (outside_dx) + 1 (dka_outside_dx) + 1 (t2dm_outside_dx)
+    # dka at dx: 1 (dka_at_dx)
+    assert count_admissions_by_diagnosis_relationship(pdu, audit_period) == (4, 1)
+
+    # Parity with the patient report Admissions tab: the panel numbers are
+    # the totals of the tab's admissions columns
+    tab_rows = annotate_admissions(
+        build_base_queryset(pdu, audit_period, type1_only=False), audit_period
+    ).values("number_of_admissions", "number_of_dka_admissions")
+    outside_dx_from_tab = sum(row["number_of_admissions"] for row in tab_rows)
+    dka_at_dx_from_tab = sum(row["number_of_dka_admissions"] for row in tab_rows)
+    assert (outside_dx_from_tab, dka_at_dx_from_tab) == (4, 1)
 
 
 # ---------------------------------------------------------------------------
