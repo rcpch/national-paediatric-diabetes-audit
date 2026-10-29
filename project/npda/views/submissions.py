@@ -255,7 +255,7 @@ class SubmissionsListView(
         Handle the HTMX POST request.
         The button name "submit-data" is used to determine the action to be taken.
         If the value of "submit-data" is "delete-data", the submission is deleted.
-        If the value of "submit-data" is "download-data", the original csv is downloaded.
+        If the value of "submit-data" is "switch-to-questionnaire", the submission is switched to a questionnaire submission.
         If the value of "submit-data" is "download-report", the commented xlsx (with validation remarks) is downloaded.
         """
         if request.htmx:
@@ -407,6 +407,36 @@ class SubmissionsListView(
                 ]
                 PatientSubmission.objects.bulk_create(next_patient_subs)
 
+            return redirect(
+                "pdu-patients",
+                pz_code=self.pdu.pz_code,
+                audit_period=self.audit_period.slug,
+            )
+
+        if button_name == "switch-to-questionnaire":
+            submission = self.get_submission_checking_permission(
+                request.user, submission_id
+            )
+            if not submission.csv_file_name:
+                messages.error(
+                    request,
+                    "This submission is already a questionnaire submission.",
+                )
+                return redirect(
+                    "pdu-submissions",
+                    pz_code=self.pdu.pz_code,
+                    audit_period=self.audit_period.slug,
+                )
+
+            # Switch to questionnaire submission by clearing the csv_file_name
+            submission.csv_file_name = None
+            submission.csv_file = None
+            submission.save()
+
+            messages.success(
+                request,
+                "Submission switched to questionnaire successfully.",
+            )
             return redirect(
                 "pdu-patients",
                 pz_code=self.pdu.pz_code,

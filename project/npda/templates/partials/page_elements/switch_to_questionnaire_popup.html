@@ -5,13 +5,16 @@
     <p class="py-4">
         All data from the last CSV file will be retained and will be editable in the platform.
     </p>
+    <p class="py-4">
+        The CSV file will be deleted. Consider downloading a copy first.
+    </p>
     <div class="modal-action">
       <form method="post" action="{% data_url 'pdu-submissions' %}">
         {% csrf_token %}
         <input type="hidden" name="audit_id" value="{{ submission.pk }}">
         <button class="btn btn-primary bg-rcpch_light_blue text-white hover:bg-rcpch_dark_blue"
                 name="submit-data"
-                value="download-data"
+                value="switch-to-questionnaire"
                 type="submit"
                 onclick="switch_to_questionnaire_modal_{{submission.pk}}.close()">OK</button>
         <button class="btn btn-outline"
