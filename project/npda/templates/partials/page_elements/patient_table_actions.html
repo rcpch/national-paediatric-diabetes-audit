@@ -57,6 +57,29 @@
                         View submission history
                     </a>
                 </li>
+                {% if user.is_superuser or request.user.is_rcpch_audit_team_member %}
+                    <!-- Pop up which explains implications of switching from questionnaire to CSV for submissions -->
+                    {% include 'partials/page_elements/switch_to_csv_popup.html' %}
+                    <div class="dropdown dropdown-bottom dropdown-end">
+                        <div tabindex="0"
+                             role="button"
+                             class="btn btn-info text-white w-12 p-0 flex">
+                            {# Trigger Element #}
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </div>
+                        <ul tabindex="0"
+                            class="dropdown-content menu bg-base-100 text-black font-normal rounded-box z-[1] w-52 p-2 shadow mt-1">
+                            <li>
+                                <button type="button"
+                                        onclick="switch_to_csv_modal_{{submission.pk}}.showModal()"
+                                        class="text-rcpch_red"
+                                    <i class="fa-solid fa-download"></i>
+                                    Switch to CSV submission (Audit Team Only)
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                {% endif %}
             </ul>
         </div>
     {% elif pdu.active %}
@@ -84,6 +107,8 @@
                 {% include 'partials/page_elements/quality_report_popup.html' %}
                 <!-- Pop up which shows data protection guidance for original data download -->
                 {% include 'partials/page_elements/original_data_popup.html' %}
+                <!-- Pop up which explains implications of switching from CSV to questionnaire for submissions -->
+                {% include 'partials/page_elements/switch_to_questionnaire_popup.html' %}
                 <div class="dropdown dropdown-bottom dropdown-end">
                     <div tabindex="0"
                          role="button"
@@ -117,6 +142,12 @@
                                     <i class="fa-solid fa-person-circle-plus"></i>
                                     Add patient manually (Audit Team only)
                                 </a>
+                                <button type="button"
+                                        onclick="switch_to_questionnaire_modal_{{submission.pk}}.showModal()"
+                                        class="text-rcpch_red"
+                                    <i class="fa-solid fa-download"></i>
+                                    Switch to questionnaire submission (Audit Team Only)
+                                </button>
                             </li>
                         {% endif %}
                     </ul>
