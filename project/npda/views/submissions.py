@@ -459,8 +459,10 @@ class SubmissionsListView(
                 )
 
             # Switch to CSV submission by setting the csv_file_name to a default value
-            submission.csv_file_name = "dummy_csv_to_switch_from_questionnaire_to_csv_upload.csv"
-            submission.csv_file = f"This is a dummy CSV file to switch {self.pdu.pz_code} from questionnaire to CSV upload".encode("utf-8")
+            submission.csv_file_name = (
+                "dummy_csv_to_switch_from_questionnaire_to_csv_upload.csv"
+            )
+            submission.csv_file = f"This is a dummy CSV file to switch {self.pdu.pz_code} from questionnaire to CSV upload".encode()
             submission.save()
 
             messages.success(
