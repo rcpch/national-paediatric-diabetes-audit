@@ -1,0 +1,24 @@
+{% load npda_tags %}
+<dialog id="switch_to_questionnaire_modal_{{submission.pk}}" class="modal text-black">
+  <div class="modal-box">
+    <h3 class="text-lg font-bold">Switch from CSV to questionnaire</h3>
+    <p class="py-4">
+        All data from the last CSV file will be retained and will be editable in the platform.
+    </p>
+    <div class="modal-action">
+      <form method="post" action="{% data_url 'pdu-submissions' %}">
+        {% csrf_token %}
+        <input type="hidden" name="audit_id" value="{{ submission.pk }}">
+        <button class="btn btn-primary bg-rcpch_light_blue text-white hover:bg-rcpch_dark_blue"
+                name="submit-data"
+                value="download-data"
+                type="submit"
+                onclick="switch_to_questionnaire_modal_{{submission.pk}}.close()">OK</button>
+        <button class="btn btn-outline"
+                type="button"
+                onclick="switch_to_questionnaire_modal_{{submission.pk}}.close()">
+          Cancel
+        </form>
+      </div>
+    </div>
+  </dialog>
