@@ -443,6 +443,36 @@ class SubmissionsListView(
                 audit_period=self.audit_period.slug,
             )
 
+        if button_name == "switch-to-csv":
+            submission = self.get_submission_checking_permission(
+                request.user, submission_id
+            )
+            if submission.csv_file_name:
+                messages.error(
+                    request,
+                    "This submission is already a CSV submission.",
+                )
+                return redirect(
+                    "pdu-submissions",
+                    pz_code=self.pdu.pz_code,
+                    audit_period=self.audit_period.slug,
+                )
+
+            # Switch to CSV submission by setting the csv_file_name to a default value
+            submission.csv_file_name = "dummy_csv_to_switch_from_questionnaire_to_csv_upload.csv"
+            submission.csv_file = f"This is a dummy CSV file to switch {self.pdu.pz_code} from questionnaire to CSV upload".encode("utf-8")
+            submission.save()
+
+            messages.success(
+                request,
+                "Submission switched to CSV successfully.",
+            )
+            return redirect(
+                "pdu-patients",
+                pz_code=self.pdu.pz_code,
+                audit_period=self.audit_period.slug,
+            )
+
         # POST is not supported for this view
         # Must therefore return the queryset as an obect_list and context
         self.object_list = self.get_queryset()
