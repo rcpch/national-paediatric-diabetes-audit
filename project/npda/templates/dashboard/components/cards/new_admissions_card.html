@@ -3,7 +3,7 @@
 {% block card_title %}
     Hospital Admissions
     <span class="text-rcpch_pink tooltip"
-          data-tip="Total admissions split by relationship to diagnosis: admissions outside +/- 10 days of diagnosis, and DKA admissions within that time"><i class="fa-solid fa-chart-line"></i></span>
+          data-tip="Total admissions of T1 patients split by relationship to diagnosis: admissions outside +/- 10 days of diagnosis, and DKA admissions within that time"><i class="fa-solid fa-chart-line"></i></span>
 {% endblock %}
 {% block card_content %}
     <div hx-get="{% data_url 'pdu-get-new-admissions-partial' %}"
