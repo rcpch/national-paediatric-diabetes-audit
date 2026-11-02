@@ -414,6 +414,14 @@ class SubmissionsListView(
             )
 
         if button_name == "switch-to-questionnaire":
+            if (
+                not request.user.is_rcpch_audit_team_member
+                and not request.user.is_superuser
+            ):
+                raise PermissionDenied(
+                    "You do not have permission to switch submission type.",
+                )
+
             submission = self.get_submission_checking_permission(
                 request.user, submission_id
             )
@@ -444,6 +452,14 @@ class SubmissionsListView(
             )
 
         if button_name == "switch-to-csv":
+            if (
+                not request.user.is_rcpch_audit_team_member
+                and not request.user.is_superuser
+            ):
+                raise PermissionDenied(
+                    "You do not have permission to switch submission type.",
+                )
+
             submission = self.get_submission_checking_permission(
                 request.user, submission_id
             )
