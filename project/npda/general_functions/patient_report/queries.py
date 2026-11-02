@@ -530,11 +530,13 @@ def annotate_care_at_diagnosis(qs, audit_period):
 def annotate_admissions(qs, audit_period):
     """Admissions for the patient report Admissions tab.
 
-    Rows: every patient with at least one valid admission in the audit period
-    (valid reason, admission or discharge date within the audit range), all
-    diabetes types, under 25 at the start of the audit period — matching
-    count_admissions() (KPI 46), which powers the "Hospital Admissions"
-    panel in the unit report.
+    Rows: every T1DM patient with at least one valid admission in the audit
+    period (valid reason, admission or discharge date within the audit range),
+    under 25 at the start of the audit period — matching count_admissions(),
+    which powers the "Hospital Admissions" panel in the unit report. The
+    patient report view passes the default build_base_queryset() cohort
+    (type1_only=True); the row count only stays equal to count_admissions()
+    (also T1DM only) because of that.
 
     Columns follow the published patient report definitions:
     - number_of_admissions, "Admissions not associated with diagnosis":
@@ -557,7 +559,7 @@ def annotate_admissions(qs, audit_period):
 
     # Every counted admission must have a valid reason, an admission or
     # discharge date within the audit period, and a visit within the audit
-    # period (as in count_admissions / KPI 46).
+    # period (as in count_admissions).
     valid_admission = Q(
         Q(visit__hospital_admission_date__range=audit_range)
         | Q(visit__hospital_discharge_date__range=audit_range)
@@ -610,7 +612,7 @@ def annotate_admissions(qs, audit_period):
         )
         .filter(
             # Any valid admission keeps the patient listed, so the row count
-            # matches count_admissions() (KPI 46) / the unit report panel
+            # matches count_admissions() / the unit report panel
             valid_admission,
         )
         .annotate(
@@ -1068,11 +1070,13 @@ def count_cgm_use(pdu, audit_period) -> tuple[int, int]:
 
 
 def count_admissions(pdu, audit_period) -> int:
-    """Count of patients with at least one valid hospital admission in the audit period.
+    """Count of T1DM patients with at least one valid hospital admission in the audit period.
 
-    Mirrors CalculateKPIS.calculate_kpi_46_number_of_admissions(). All diabetes types.
-    A valid admission has a recognised admission reason AND either admission or
-    discharge date within the audit period.
+    T1DM only, as in the patient report Admissions tab (annotate_admissions)
+    and the unit report admissions numbers. Deliberately narrower than
+    CalculateKPIS.calculate_kpi_46_number_of_admissions(), whose cohort is
+    all diabetes types. A valid admission has a recognised admission reason
+    AND either admission or discharge date within the audit period.
     """
     audit_range = (audit_period.start_date, audit_period.end_date)
     if audit_period.get_dataset_year() < 2026:
@@ -1086,6 +1090,7 @@ def count_admissions(pdu, audit_period) -> int:
             submissions__submission_active=True,
             submissions__audit_period=audit_period,
             submissions__paediatric_diabetes_unit=pdu,
+            diabetes_type=DIABETES_TYPES[0][0],
             visit__visit_date__range=audit_range,
             date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
         )
@@ -1110,9 +1115,9 @@ def count_admissions_by_diagnosis_relationship(pdu, audit_period) -> tuple[int, 
 
     Both are admission (visit) counts — the unit report panel shows the
     totals of the patient report tab columns — with the same eligibility
-    as count_admissions() (KPI 46): all diabetes types (no T1DM filter),
-    under 25 at the start of the audit period, valid admission reason,
-    admission or discharge date within the audit period. The two counts do
+    as count_admissions(): T1DM only, under 25 at the start of the audit
+    period, valid admission reason, admission or discharge date within
+    the audit period. The two counts do
     not sum to count_admissions()' patients: a patient can contribute to
     both (an unrelated admission AND a DKA admission at diagnosis) or to
     neither (a non-DKA admission within +/- 10 days of diagnosis counts in
@@ -1134,6 +1139,7 @@ def count_admissions_by_diagnosis_relationship(pdu, audit_period) -> tuple[int, 
         patient__submissions__submission_active=True,
         patient__submissions__audit_period=audit_period,
         patient__submissions__paediatric_diabetes_unit=pdu,
+        patient__diabetes_type=DIABETES_TYPES[0][0],
         visit_date__range=audit_range,
         patient__date_of_birth__gt=audit_period.start_date - relativedelta(years=25),
     ).distinct()

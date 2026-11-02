@@ -123,7 +123,7 @@ The same methodology applies to carbohydrate counting, though the threshold is 1
 - Admissions not associated with diagnosis
 - Admissions - DKA at diagnosis
 
-This category relates only to patients that have had a hospital admission during the audit period. All diabetes types are included (not just T1DM), and patients aged 25 or over at the start of the audit period are excluded. The patient list must match `count_admissions()` (KPI 46), which powers the "Hospital Admissions" panel in the unit report — the number of rows here equals the count shown there.
+This category relates only to patients that have had a hospital admission during the audit period. Only patients with Type 1 diabetes are included, and patients aged 25 or over at the start of the audit period are excluded. The patient list must match `count_admissions()` (T1DM only), which powers the "Hospital Admissions" panel in the unit report — the number of rows here equals the count shown there. Both are deliberately narrower than KPI 46, whose cohort is all diabetes types.
 
 Column definitions (published patient report):
 
@@ -249,7 +249,7 @@ This should involve:
 
 ##### Admissions
 
-- All diabetes types (`build_base_queryset(type1_only=False)`); patients under 25 at the start of the audit period only.
+- T1DM only (the default `build_base_queryset()` cohort, `type1_only=True`); patients under 25 at the start of the audit period only.
 - Filter to patients with at least one valid admission in the audit period (any timing relative to diagnosis), so the row count matches KPI 46 / `count_admissions()` and the dashboard "Hospital Admissions" panel.
 - Admissions not associated with diagnosis: `Count` visits with a valid admission reason and admission/discharge date in the audit range whose admission date is NOT within +/- 10 days of diagnosis.
 - Admissions - DKA at diagnosis: `Count` visits with a valid admission reason and admission/discharge date in the audit range whose admission date IS within +/- 10 days of diagnosis AND whose reason is DKA.
