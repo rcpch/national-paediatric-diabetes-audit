@@ -228,13 +228,10 @@ def calculate_queryset(
         return pt_qs, patient_identifier
 
     if selected_category == TableCategories.ADMISSIONS.value:
-        # All diabetes types, matching count_admissions() (KPI 46) used by the
-        # dashboard "Hospital Admissions" panel.
-        admissions_base_qs = patient_report_queries.build_base_queryset(
-            pdu, audit_period, type1_only=False
-        )
+        # T1DM only (the default base_qs cohort), matching count_admissions()
+        # used by the dashboard "Hospital Admissions" panel.
         pt_qs = patient_report_queries.annotate_admissions(
-            admissions_base_qs, audit_period
+            base_qs, audit_period
         ).values(
             "pk",
             "patient_identifier",

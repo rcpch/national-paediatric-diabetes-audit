@@ -619,9 +619,7 @@ class TestPatientReportAdmissionQueries:
 
         self._create_submission(pdu, audit_period, user, [patient])
 
-        qs = annotate_admissions(
-            build_base_queryset(pdu, audit_period, type1_only=False), audit_period
-        )
+        qs = annotate_admissions(build_base_queryset(pdu, audit_period), audit_period)
         rows = {
             row["pk"]: row
             for row in qs.values(
@@ -679,9 +677,7 @@ class TestPatientReportAdmissionQueries:
 
         self._create_submission(pdu, audit_period, user, [patient])
 
-        qs = annotate_admissions(
-            build_base_queryset(pdu, audit_period, type1_only=False), audit_period
-        )
+        qs = annotate_admissions(build_base_queryset(pdu, audit_period), audit_period)
         rows = {
             row["pk"]: row
             for row in qs.values(
@@ -741,9 +737,7 @@ class TestPatientReportAdmissionQueries:
 
         self._create_submission(pdu, audit_period, user, [patient])
 
-        qs = annotate_admissions(
-            build_base_queryset(pdu, audit_period, type1_only=False), audit_period
-        )
+        qs = annotate_admissions(build_base_queryset(pdu, audit_period), audit_period)
         rows = {row["pk"]: row for row in qs}
 
         assert patient.pk not in rows, (
@@ -795,9 +789,7 @@ class TestPatientReportAdmissionQueries:
 
         self._create_submission(pdu, audit_period, user, [patient])
 
-        qs = annotate_admissions(
-            build_base_queryset(pdu, audit_period, type1_only=False), audit_period
-        )
+        qs = annotate_admissions(build_base_queryset(pdu, audit_period), audit_period)
         rows = {
             row["pk"]: row
             for row in qs.values(
@@ -876,9 +868,7 @@ class TestPatientReportAdmissionQueries:
 
         self._create_submission(pdu, audit_period, user, [patient])
 
-        qs = annotate_admissions(
-            build_base_queryset(pdu, audit_period, type1_only=False), audit_period
-        )
+        qs = annotate_admissions(build_base_queryset(pdu, audit_period), audit_period)
         rows = {
             row["pk"]: row
             for row in qs.values(
@@ -941,9 +931,7 @@ class TestPatientReportAdmissionQueries:
 
         self._create_submission(pdu, audit_period, user, [patient])
 
-        qs = annotate_admissions(
-            build_base_queryset(pdu, audit_period, type1_only=False), audit_period
-        )
+        qs = annotate_admissions(build_base_queryset(pdu, audit_period), audit_period)
         rows = {
             row["pk"]: row
             for row in qs.values(
@@ -1007,9 +995,7 @@ class TestPatientReportAdmissionQueries:
 
         self._create_submission(pdu, audit_period, user, [patient])
 
-        qs = annotate_admissions(
-            build_base_queryset(pdu, audit_period, type1_only=False), audit_period
-        )
+        qs = annotate_admissions(build_base_queryset(pdu, audit_period), audit_period)
         rows = {
             row["pk"]: row
             for row in qs.values(
@@ -1071,9 +1057,7 @@ class TestPatientReportAdmissionQueries:
 
         self._create_submission(pdu, audit_period, user, [patient])
 
-        qs = annotate_admissions(
-            build_base_queryset(pdu, audit_period, type1_only=False), audit_period
-        )
+        qs = annotate_admissions(build_base_queryset(pdu, audit_period), audit_period)
         rows = {
             row["pk"]: row
             for row in qs.values(
@@ -1150,9 +1134,7 @@ class TestPatientReportAdmissionQueries:
 
         self._create_submission(pdu, audit_period, user, [at_boundary, past_boundary])
 
-        qs = annotate_admissions(
-            build_base_queryset(pdu, audit_period, type1_only=False), audit_period
-        )
+        qs = annotate_admissions(build_base_queryset(pdu, audit_period), audit_period)
         rows = {
             row["pk"]: row
             for row in qs.values(
@@ -1215,14 +1197,72 @@ class TestPatientReportAdmissionQueries:
 
         self._create_submission(pdu, audit_period, user, [patient])
 
-        qs = annotate_admissions(
-            build_base_queryset(pdu, audit_period, type1_only=False), audit_period
-        )
+        qs = annotate_admissions(build_base_queryset(pdu, audit_period), audit_period)
         rows = {row["pk"]: row for row in qs}
 
         assert patient.pk not in rows, (
             "Patients aged 25 or over at audit period start should be excluded"
         )
+
+    @pytest.mark.parametrize(
+        "get_audit_period,stabilisation_code,dka_code,is_2026",
+        [
+            (_get_audit_period_2021.__func__, 1, 2, False),  # 2021 dataset
+            (_get_audit_period_2026.__func__, 5, 1, True),  # 2026 dataset
+        ],
+        ids=["2021", "2026"],
+    )
+    def test_non_t1dm_patient_excluded(
+        self,
+        get_audit_period,
+        stabilisation_code,
+        dka_code,
+        is_2026,
+        seed_groups_fixture,
+        seed_users_fixture,
+        seed_audit_periods_fixture,
+    ):
+        """Only T1DM patients are listed: a non-T1DM patient with a valid
+        admission is excluded, as in count_admissions()."""
+        user, pdu = self._get_user_and_pdu()
+        audit_period = get_audit_period()
+
+        t1dm = PatientFactory(
+            nhs_number=f"800{0 if not is_2026 else 10}600000",
+            diabetes_type=DIABETES_TYPES[0][0],
+            date_of_birth=audit_period.start_date - relativedelta(years=15),
+            diagnosis_date=audit_period.start_date - relativedelta(days=200),
+        )
+        non_t1dm = PatientFactory(
+            nhs_number=f"800{1 if not is_2026 else 11}600001",
+            diabetes_type=DIABETES_TYPES[1][0],  # T2DM
+            date_of_birth=audit_period.start_date - relativedelta(years=15),
+            diagnosis_date=audit_period.start_date - relativedelta(days=200),
+        )
+        for patient in (t1dm, non_t1dm):
+            visit_kwargs = {
+                "patient": patient,
+                "visit_date": audit_period.start_date + relativedelta(days=50),
+                "hospital_admission_date": audit_period.start_date
+                + relativedelta(days=50),
+                "hospital_discharge_date": audit_period.start_date
+                + relativedelta(days=55),
+            }
+            if is_2026:
+                visit_kwargs["hospital_admission_reason_2026"] = stabilisation_code
+            else:
+                visit_kwargs["hospital_admission_reason"] = stabilisation_code
+            VisitFactory(**visit_kwargs)
+
+        self._create_submission(pdu, audit_period, user, [t1dm, non_t1dm])
+
+        qs = annotate_admissions(build_base_queryset(pdu, audit_period), audit_period)
+        listed_pks = set(qs.values_list("pk", flat=True))
+
+        assert listed_pks == {t1dm.pk}, (
+            "Only T1DM patients should be listed in the Admissions tab"
+        )
+        assert count_admissions(pdu, audit_period) == 1
 
     @pytest.mark.parametrize(
         "get_audit_period,stabilisation_code,dka_code,is_2026",
@@ -1246,7 +1286,7 @@ class TestPatientReportAdmissionQueries:
 
         count_admissions powers the "Hospital Admissions" panel in the unit
         report, so the number of rows in the patient report Admissions tab
-        must equal it: all diabetes types, under 25 at audit period start,
+        must equal it: T1DM only, under 25 at audit period start,
         any valid admission regardless of its timing relative to diagnosis
         (including DKA at diagnosis and non-DKA admissions within the
         +/- 10 day diagnosis window, which appear in neither column).
@@ -1278,7 +1318,8 @@ class TestPatientReportAdmissionQueries:
         )
         admission_visit(admitted_t1dm, reason=stabilisation_code)
 
-        # Counted: non-T1DM patient admitted (all diabetes types)
+        # Not counted: non-T1DM patient admitted (T1DM only, as in
+        # count_admissions)
         admitted_t2dm = PatientFactory(
             nhs_number=f"800{0 if not is_2026 else 10}000000",
             diabetes_type=DIABETES_TYPES[1][0],
@@ -1344,16 +1385,13 @@ class TestPatientReportAdmissionQueries:
             ],
         )
 
-        qs = annotate_admissions(
-            build_base_queryset(pdu, audit_period, type1_only=False), audit_period
-        )
+        qs = annotate_admissions(build_base_queryset(pdu, audit_period), audit_period)
         listed_pks = set(qs.values_list("pk", flat=True))
 
         assert listed_pks == {
             admitted_t1dm.pk,
-            admitted_t2dm.pk,
             dka_at_diagnosis.pk,
             stabilisation_at_diagnosis.pk,
         }
-        assert count_admissions(pdu, audit_period) == 4
+        assert count_admissions(pdu, audit_period) == 3
         assert qs.count() == count_admissions(pdu, audit_period)

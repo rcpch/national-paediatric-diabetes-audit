@@ -974,7 +974,8 @@ def test_count_cgm_use_2026_later_visit_null_falls_back_to_earlier_cgm(
 def test_count_admissions_counts_patients_with_valid_admission_in_audit_period(
     seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture
 ):
-    """Patients with a valid hospital admission within the audit period are counted."""
+    """T1DM patients with a valid hospital admission within the audit period
+    are counted; non-T1DM patients with one are not (T1DM only)."""
     user, pdu = _get_user_and_pdu()
     audit_period = AuditPeriod.objects.get(slug="2024-2025")
     visit_date = audit_period.start_date + relativedelta(days=10)
@@ -990,6 +991,12 @@ def test_count_admissions_counts_patients_with_valid_admission_in_audit_period(
         date_of_birth=audit_period.start_date - relativedelta(years=10),
         diagnosis_date=audit_period.start_date - relativedelta(days=91),
     )
+    # Not counted: non-T1DM patient with a valid admission (T1DM only)
+    t2dm_admitted = PatientFactory(
+        diabetes_type=DIABETES_TYPES[1][0],
+        date_of_birth=audit_period.start_date - relativedelta(years=10),
+        diagnosis_date=audit_period.start_date - relativedelta(days=91),
+    )
     VisitFactory(
         patient=admitted,
         visit_date=visit_date,
@@ -1002,9 +1009,16 @@ def test_count_admissions_counts_patients_with_valid_admission_in_audit_period(
         visit_date=visit_date,
         hospital_admission_date=None,
     )
+    VisitFactory(
+        patient=t2dm_admitted,
+        visit_date=visit_date,
+        hospital_admission_date=admission_date,
+        hospital_discharge_date=admission_date + relativedelta(days=2),
+        hospital_admission_reason=HOSPITAL_ADMISSION_REASONS_2021[0][0],
+    )
 
     submission = _create_submission(user, pdu, audit_period)
-    submission.patients.add(admitted, not_admitted)
+    submission.patients.add(admitted, not_admitted, t2dm_admitted)
 
     assert count_admissions(pdu, audit_period) == 1
 
@@ -1085,8 +1099,7 @@ def test_count_admissions_by_diagnosis_relationship(
     DKA admissions within +/- 10 days of diagnosis. A non-DKA admission
     within the window counts in neither. Both are admission (visit) counts
     — the totals of the patient report tab columns — with count_admissions()
-    (KPI 46) eligibility: all diabetes types (no T1DM filter), under 25 at
-    audit period start.
+    eligibility: T1DM only, under 25 at audit period start.
     """
     user, pdu = _get_user_and_pdu()
     audit_period = get_audit_period()
@@ -1160,8 +1173,8 @@ def test_count_admissions_by_diagnosis_relationship(
         admission_date=start + relativedelta(days=70),
     )
 
-    # outside dx: non-T1DM patient with an admission — the counts include
-    # all diabetes types (no T1DM filter), as in count_admissions() (KPI 46)
+    # Not counted: non-T1DM patient with an admission — T1DM only, as in
+    # count_admissions()
     t2dm_outside_dx = PatientFactory(
         diabetes_type=DIABETES_TYPES[1][0],
         date_of_birth=start - relativedelta(years=10),
@@ -1191,18 +1204,18 @@ def test_count_admissions_by_diagnosis_relationship(
         not_admitted,
     )
 
-    # outside dx: 2 (outside_dx) + 1 (dka_outside_dx) + 1 (t2dm_outside_dx)
+    # outside dx: 2 (outside_dx) + 1 (dka_outside_dx)
     # dka at dx: 1 (dka_at_dx)
-    assert count_admissions_by_diagnosis_relationship(pdu, audit_period) == (4, 1)
+    assert count_admissions_by_diagnosis_relationship(pdu, audit_period) == (3, 1)
 
     # Parity with the patient report Admissions tab: the panel numbers are
     # the totals of the tab's admissions columns
     tab_rows = annotate_admissions(
-        build_base_queryset(pdu, audit_period, type1_only=False), audit_period
+        build_base_queryset(pdu, audit_period), audit_period
     ).values("number_of_admissions", "number_of_dka_admissions")
     outside_dx_from_tab = sum(row["number_of_admissions"] for row in tab_rows)
     dka_at_dx_from_tab = sum(row["number_of_dka_admissions"] for row in tab_rows)
-    assert (outside_dx_from_tab, dka_at_dx_from_tab) == (4, 1)
+    assert (outside_dx_from_tab, dka_at_dx_from_tab) == (3, 1)
 
 
 # ---------------------------------------------------------------------------
