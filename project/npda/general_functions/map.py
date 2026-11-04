@@ -129,6 +129,20 @@ def generate_dataframe_and_aggregated_distance_data_from_cases(filtered_cases):
                 lambda d: d.mi if d is not None else 0
             )
 
+            # pandas upcasts a nullable int column that mixes ints and None to
+            # float64, turning None into NaN. NaN would be serialized by
+            # json_script as an invalid JSON `NaN` token (crashing JSON.parse in
+            # the browser), so restore the database representation: int where
+            # set, None where missing. Note that Series.apply cannot be used
+            # here - it re-infers the returned values back to float64.
+            if "index_of_multiple_deprivation_quintile" in geo_df.columns:
+                imd_quintile = geo_df["index_of_multiple_deprivation_quintile"]
+                geo_df["index_of_multiple_deprivation_quintile"] = (
+                    imd_quintile.astype("Int64")
+                    .astype(object)
+                    .where(imd_quintile.notna(), None)
+                )
+
             # Remove any rows that still have None values after coordinate extraction
             geo_df = geo_df.dropna(subset=["longitude", "latitude"])
 
