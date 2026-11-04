@@ -41,9 +41,10 @@ django-silk==5.4.3
 gunicorn>=22.0.0
 
 # Celery (background tasks)
-celery==5.4.0
-flower==2.0.1
-redis==5.2.1
+celery==5.6.3
+kombu==5.7.0
+flower==2.2.0
+redis==8.1.0
 
 # Automatically reloading Celery on file changes
 watchdog==6.0.0

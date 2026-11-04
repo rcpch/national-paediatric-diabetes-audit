@@ -144,6 +144,16 @@ LOGGING = {
         "two_factor": {
             "handlers": ["npda_console", "npda_logfile", "mail_admins"],
         },
+        # Without this, every celery.* log record is dropped: there is no root
+        # handler above, so a crashing worker (eg broker connection failure)
+        # exits silently. project/celery.py applies this config via the
+        # setup_logging signal, which disables celery's own logging setup.
+        "celery": {
+            "handlers": ["django_console", "npda_logfile"],
+            "level": CONSOLE_DJANGO_LOG_LEVEL,
+            "propagate": False,
+            "formatter": "simple_django",
+        },
         **request_loggers,
     },
 }
