@@ -1,12 +1,16 @@
 """Tests for the unit report view"""
 
-from http import HTTPStatus
-
 # Python imports
+import json
+from http import HTTPStatus
+from unittest.mock import patch
+
 import pytest
 from dateutil.relativedelta import relativedelta
 
 # 3rd party imports
+from django.contrib.gis.geos import Point
+from django.core.serializers.json import DjangoJSONEncoder
 from django.urls import reverse
 
 from project.constants.diabetes_types import DIABETES_TYPES
@@ -239,6 +243,91 @@ def test_new_admissions_partial_splits_by_diagnosis_relationship(
     assert response.context["n_dka_admissions_at_dx"] == 0
     assert b"unrelated to dx" in response.content
     assert b"DKA at dx" in response.content
+
+
+@pytest.mark.django_db
+def test_map_chart_partial_payload_is_valid_json_when_imd_quintile_missing(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """The map payload must stay valid JSON when some patients have an IMD
+    quintile and others do not.
+
+    pandas upcasts the nullable integer column to float64 as soon as one
+    patient has a quintile and another has None, turning None into NaN.
+    json_script would then emit a bare `NaN` token, which is invalid JSON and
+    crashes JSON.parse in the browser, taking the whole map down.
+    """
+    audit_period = AuditPeriod.objects.get_default_audit_period()
+
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=test_user_audit_centre_editor_data.role,
+    ).first()
+    pdu = user.organisation_employers.first()
+    pdu.lead_organisation_geocoordinates = Point(-2.9003, 53.4152)
+    pdu.save()
+
+    # One patient with a quintile, one without - the mix that triggers the
+    # pandas float64 upcast (a column of all-None stays object dtype)
+    patient_with_imd = PatientFactory(
+        index_of_multiple_deprivation_quintile=4,
+        location_wgs84=Point(-0.127014, 51.529985, srid=4326),
+    )
+    patient_without_imd = PatientFactory(
+        index_of_multiple_deprivation_quintile=None,
+        location_wgs84=Point(-0.3, 51.4, srid=4326),
+    )
+
+    submission = Submission.objects.create(
+        paediatric_diabetes_unit=pdu,
+        audit_period=audit_period,
+        audit_year=audit_period.start_date.year,
+        submission_date=audit_period.start_date,
+        submission_by=user,
+        submission_active=True,
+    )
+    submission.patients.add(patient_with_imd)
+    submission.patients.add(patient_without_imd)
+
+    client = login_and_verify_user(client, user)
+
+    with patch(
+        "project.npda.views.dashboard.partials.fetch_organisation_by_ods_code",
+        return_value={"longitude": -2.9003, "latitude": 53.4152, "country": "England"},
+    ):
+        response = client.get(
+            reverse(
+                "pdu-get-map-chart-partial",
+                kwargs={
+                    "audit_period": audit_period.slug,
+                    "pz_code": ALDER_HEY_PZ_CODE,
+                },
+            ),
+            HTTP_HX_REQUEST="true",
+        )
+
+    assert response.status_code == HTTPStatus.OK
+
+    # The bug: the rendered payload contained a bare NaN token
+    assert b"NaN" not in response.content
+
+    map_payload = response.context["map_payload"]
+    patients_by_id = {patient["id"]: patient for patient in map_payload["patients"]}
+    assert len(patients_by_id) == 2
+
+    imd_with = patients_by_id[patient_with_imd.pk]["imd_quintile"]
+    imd_without = patients_by_id[patient_without_imd.pk]["imd_quintile"]
+    assert imd_with == 4
+    assert isinstance(imd_with, int)
+    assert imd_without is None
+
+    # json_script must emit strict JSON: reject NaN/Infinity tokens the same
+    # way the browser's JSON.parse does
+    def _reject_json_constant(value):
+        raise ValueError(f"Invalid JSON constant in map payload: {value}")
+
+    serialized = json.dumps(map_payload, cls=DjangoJSONEncoder)
+    json.loads(serialized, parse_constant=_reject_json_constant)
 
 
 @pytest.mark.parametrize(
