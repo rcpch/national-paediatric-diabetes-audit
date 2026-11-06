@@ -13,6 +13,11 @@ from django.utils.translation import gettext as _
 
 # RCPCH imports
 from ...constants.styles.form_styles import *
+from ..general_functions.inactivity_deactivation import (
+    deactivate_user_for_inactivity,
+    get_inactivity_deactivation_message,
+    is_inactive_beyond_deactivation_period,
+)
 from ..models import NPDAUser, VisitActivity
 from ..signals import get_client_ip
 
@@ -179,6 +184,18 @@ class CaptchaAuthenticationForm(AuthenticationForm):
                 or "SET LOCAL DEV ADMIN PASSWORD IN ENVIRONMENT VARIABLES"
             )
             self.fields["captcha"].required = False
+
+    def confirm_login_allowed(self, user):
+        # Deactivate the account if the user has not logged in for longer
+        # than the configured inactivity period
+        if is_inactive_beyond_deactivation_period(user):
+            deactivate_user_for_inactivity(user, request=self.request)
+            raise forms.ValidationError(
+                get_inactivity_deactivation_message(),
+                code="inactive",
+            )
+
+        super().confirm_login_allowed(user)
 
     def clean_username(self) -> dict[str]:
         email = super().clean()["username"]
