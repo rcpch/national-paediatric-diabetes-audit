@@ -13,7 +13,6 @@ from datetime import timedelta
 from http import HTTPStatus
 
 import pytest
-from django.core import mail
 from django.core.exceptions import ValidationError
 from django.test import override_settings
 from django.urls import reverse
@@ -22,6 +21,7 @@ from django.utils import timezone
 from project.constants.user import AUDIT_CENTRE_COORDINATOR, AUDIT_CENTRE_EDITOR
 from project.npda.forms.npda_user_form import CaptchaAuthenticationForm
 from project.npda.general_functions.inactivity_deactivation import (
+    get_inactivity_deactivation_message,
     is_inactive_beyond_deactivation_period,
 )
 from project.npda.models import NPDAUser, VisitActivity
@@ -125,8 +125,6 @@ def test_confirm_login_allowed_deactivates_user_inactive_beyond_period(
 
     user.refresh_from_db()
     assert user.is_active is False
-    assert len(mail.outbox) == 1
-    assert mail.outbox[0].to == [user.email]
 
     # An audit log entry records the deactivation and its reason
     deactivation_activity = VisitActivity.objects.filter(
@@ -156,48 +154,19 @@ def test_confirm_login_allowed_allows_recently_active_user(
 
     user.refresh_from_db()
     assert user.is_active is True
-    assert len(mail.outbox) == 0
 
 
 @pytest.mark.django_db
-@override_settings(
-    ACCOUNT_INACTIVITY_DEACTIVATION_PERIOD_DAYS=INACTIVITY_PERIOD_DAYS,
-    SITE_CONTACT_EMAIL="npda@rcpch.ac.uk",
-)
-def test_deactivation_email_contains_coordinator_contacts(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-):
-    coordinator = NPDAUserFactory(
-        first_name="Care",
-        surname="Coordinator",
-        role=AUDIT_CENTRE_COORDINATOR,
-        organisation_employers=[ALDER_HEY_PZ_CODE],
-    )
-    inactive_coordinator = NPDAUserFactory(
-        first_name="Sleeping",
-        surname="Coordinator",
-        role=AUDIT_CENTRE_COORDINATOR,
-        is_active=False,
-        organisation_employers=[ALDER_HEY_PZ_CODE],
-    )
-    user = NPDAUserFactory(
-        role=AUDIT_CENTRE_EDITOR,
-        last_login=timezone.now() - timedelta(days=800),
-        organisation_employers=[ALDER_HEY_PZ_CODE],
-    )
+@override_settings(SITE_CONTACT_EMAIL="npda@rcpch.ac.uk")
+def test_deactivation_message_directs_user_to_the_npda_team():
+    """
+    The login page message is the only notification the user receives, so it
+    must tell them how to get their account reactivated.
+    """
+    message = get_inactivity_deactivation_message()
 
-    form = CaptchaAuthenticationForm(request=None)
-    with pytest.raises(ValidationError):
-        form.confirm_login_allowed(user)
-
-    assert len(mail.outbox) == 1
-    email = mail.outbox[0]
-    assert email.to == [user.email]
-    assert coordinator.email in email.body
-    assert inactive_coordinator.email not in email.body
-    assert "npda@rcpch.ac.uk" in email.body
+    assert "deactivated due to inactivity" in message
+    assert "npda@rcpch.ac.uk" in message
 
 
 # RCPCHLoginView (local development 2FA/captcha bypass login path)
@@ -228,8 +197,6 @@ def test_login_attempt_deactivates_user_inactive_beyond_period(
 
     user.refresh_from_db()
     assert user.is_active is False
-    assert len(mail.outbox) == 1
-    assert mail.outbox[0].to == [user.email]
 
     # Sent back to the login page with a message about the deactivation
     assert response.redirect_chain[0][0] == reverse("login")
@@ -265,14 +232,10 @@ def test_login_succeeds_for_recently_active_user(
 
     user.refresh_from_db()
     assert user.is_active is True
-    assert len(mail.outbox) == 0
 
     # Logged in: not sent back to the login page
     assert response.redirect_chain[0][0] != reverse("login")
     assert response.status_code == 200
-
-
-# Reactivation by a PDU coordinator
 
 
 # Reactivation by a PDU coordinator
