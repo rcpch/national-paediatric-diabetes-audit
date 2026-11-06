@@ -21,6 +21,7 @@ class VisitActivity(models.Model):
     ASSIGNED_USER_TO_PDU = 15
     REMOVED_USER_FROM_PDU = 16
     USER_PDU_ROLE_CHANGED = 17
+    ACCOUNT_DEACTIVATED_INACTIVITY = 18
     ACTIVITY = (
         (SUCCESSFUL_LOGIN, "Successful login"),
         (UNSUCCESSFUL_LOGIN, "Login failed"),
@@ -42,6 +43,10 @@ class VisitActivity(models.Model):
         (ASSIGNED_USER_TO_PDU, "User assigned to PDU"),
         (REMOVED_USER_FROM_PDU, "User removed from PDU"),
         (USER_PDU_ROLE_CHANGED, "User PDU role changed"),
+        (
+            ACCOUNT_DEACTIVATED_INACTIVITY,
+            "Account deactivated due to inactivity",
+        ),
     )
 
     activity_datetime = models.DateTimeField(auto_created=True, default=timezone.now)

@@ -11,6 +11,7 @@ from django.contrib.auth.signals import (
 )
 from django.db.models.signals import post_save, pre_delete, pre_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 # third party imports
 from two_factor.signals import user_verified
@@ -80,6 +81,7 @@ ACTIVITY = (
     (15, "User assigned to PDU"),  # ASSIGNED_USER_TO_PDU
     (16, "User removed from PDU"),  # REMOVED_USER_FROM_PDU
     (17, "User PDU role changed"),  # USER_PDU_ROLE_CHANGED
+    (18, "Account deactivated due to inactivity"),  # ACCOUNT_DEACTIVATED_INACTIVITY
 )
 
 
@@ -195,6 +197,15 @@ def log_and_notify_user_changes(sender, instance, created, **kwargs):
             changes = _detect_changes(instance, original_values)
 
             if changes:
+                # Reactivation of a deactivated account (eg by a PDU
+                # coordinator, after an automatic deactivation due to
+                # inactivity) restarts the inactivity deactivation clock.
+                # A queryset update is used so the signals are not retriggered.
+                if changes.get("is_active", {}).get("new") is True:
+                    NPDAUser.objects.filter(pk=instance.pk).update(
+                        reactivated_at=timezone.now()
+                    )
+
                 # Log all changes
                 _log_user_changes(instance, changes, current_user)
 

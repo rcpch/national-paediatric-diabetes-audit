@@ -41,6 +41,11 @@ from ..general_functions import (
     organisations_adapter,
     send_email_to_recipients,
 )
+from ..general_functions.inactivity_deactivation import (
+    deactivate_user_for_inactivity,
+    get_inactivity_deactivation_message,
+    is_inactive_beyond_deactivation_period,
+)
 
 # RCPCH imports
 from ..models import AuditPeriod, NPDAUser, OrganisationEmployer, VisitActivity
@@ -906,6 +911,19 @@ class RCPCHLoginView(TwoFactorLoginView):
                 password=self.request.POST.get("auth-password"),
             )
             if user is not None:
+                # Deactivate the account if the user has not logged in for
+                # longer than the configured inactivity period
+                if is_inactive_beyond_deactivation_period(user):
+                    deactivate_user_for_inactivity(user, request=self.request)
+                    messages.add_message(
+                        self.request,
+                        messages.ERROR,
+                        get_inactivity_deactivation_message(),
+                    )
+                    return self.delete_cookies_from_response(
+                        redirect(settings.LOGIN_URL)
+                    )
+
                 login(self.request, user)
 
                 # Override normal auth flow behaviour, redirect straight away

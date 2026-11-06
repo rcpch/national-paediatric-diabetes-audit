@@ -20,7 +20,14 @@ def set_current_user(user):
 
 
 def get_current_user():
-    return getattr(_user, "value", None)
+    user = getattr(_user, "value", None)
+    # request.user is an AnonymousUser for unauthenticated requests (eg login).
+    # Actions performed in those requests (eg automated account deactivation)
+    # are system actions, so callers expect None rather than an AnonymousUser,
+    # which has no email address.
+    if user is not None and not user.is_authenticated:
+        return None
+    return user
 
 
 def set_current_request(request):
