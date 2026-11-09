@@ -5,6 +5,7 @@ from .dgc_centile_calculations import *
 from .email import *
 from .group_for_group import *
 from .headings import *
+from .inactivity_deactivation import *
 from .index_multiple_deprivation import *
 from .ip_address import *
 from .justification_or_standard import *

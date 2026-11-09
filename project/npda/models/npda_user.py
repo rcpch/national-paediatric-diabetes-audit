@@ -183,6 +183,11 @@ class NPDAUser(AbstractUser, PermissionsMixin):
     role = models.PositiveSmallIntegerField(choices=ROLES)
     email_confirmed = models.BooleanField(default=False)
     password_last_set = models.DateTimeField(default=timezone.now)
+    reactivated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="The date and time this account was last reactivated by an administrator, if ever. Reactivation restarts the inactivity deactivation clock.",
+    )
     feature_flags = models.JSONField(default=list, blank=True)
 
     REQUIRED_FIELDS = ["role", "first_name", "surname", "is_rcpch_audit_team_member"]
