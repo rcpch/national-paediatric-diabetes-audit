@@ -25,6 +25,11 @@ from ...constants import (
 # import csv mappings
 from ...constants.csv_headings import csv_definition_for
 
+# User-friendly explanation prepended to __fatal__ errors in the data quality report
+FATAL_ERROR_EXPLANATION = (
+    "This row failed to save in the database and will be missing from your submission"
+)
+
 
 def write_errors_to_xlsx(
     errors: dict[str, dict[str, list[str]]],
@@ -209,6 +214,11 @@ def flatten_errors(
             # __all__ errors should be attached to the first column
             csv_definition = csv_definition_for(field, dataset_year)
             column = csv_definition["heading"] if csv_definition else identifier_column
+
+            # Fatal errors mean the row failed to save entirely - explain the
+            # consequence alongside the raw exception detail
+            if field == "__fatal__":
+                errors = [FATAL_ERROR_EXPLANATION, *errors]
 
             rows.append(
                 {

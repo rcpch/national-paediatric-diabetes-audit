@@ -193,6 +193,7 @@ class PatientListView(
 
         submission = None
         submission_error_count = 0
+        fatal_error_csv_rows = []
 
         submission = Submission.objects.get_submission_for_request(
             self.pdu, self.audit_period
@@ -208,8 +209,19 @@ class PatientListView(
                 for errors_for_field in errors_for_visit.values():
                     submission_error_count += len(errors_for_field)
 
+            # Rows that failed to save at all are recorded under the __fatal__
+            # sentinel field (see csv_upload). Convert to the 1-based CSV row
+            # numbers used in the data quality report: stored indices are
+            # 0-based and row 1 is the header.
+            fatal_error_csv_rows = sorted(
+                int(row_index) + 2
+                for row_index, errors_for_row in submission_errors.items()
+                if "__fatal__" in errors_for_row
+            )
+
         context["submission"] = submission
         context["last_submission"] = last_submission
+        context["fatal_error_csv_rows"] = fatal_error_csv_rows
         context["submission_valid_count"] = (
             context["paginator"].count - submission_error_count
         )

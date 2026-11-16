@@ -480,3 +480,70 @@ def test_errors_overview_uses_2026_headings_for_2026_upload(
         "Following annual psychological screening, was the patient assessed as requiring additional psychological support outside of routine care?",
         "This field is required.",
     ]
+
+
+@pytest.mark.django_db
+def test_fatal_error_rows_have_user_friendly_message_in_errors_overview(
+    seed_groups_fixture, seed_users_fixture, seed_audit_periods_fixture, client
+):
+    """
+    Rows that failed to save entirely (__fatal__ sentinel) must carry a
+    user-friendly explanation in the Errors column, ahead of the raw
+    exception detail. Non-fatal errors must not carry the explanation.
+    """
+    audit_period = AuditPeriod.objects.get(slug="2025-2026")
+    sub = create_submission(
+        audit_period,
+        pz_code=ALDER_HEY_PZ_CODE,
+        csv_file_name="test_download_fatal.csv",
+        csv_file=_CSV_2021,
+    )
+    # Simulate the errors recorded during upload: a fatal error on row 0 and
+    # a regular field error on row 1
+    sub.errors = json.dumps(
+        {
+            "0": {"__fatal__": ["UNIQUE constraint failed: npda_patient.nhs_number"]},
+            "1": {"nhs_number": ["NHS Number is not valid"]},
+        }
+    )
+    sub.save()
+
+    user = NPDAUser.objects.filter(
+        organisation_employers__pz_code=ALDER_HEY_PZ_CODE,
+        role=AUDIT_CENTRE_EDITOR,
+    ).first()
+
+    client = login_and_verify_user(client, user)
+
+    download_url = reverse(
+        "pdu-submissions",
+        kwargs={
+            "pz_code": ALDER_HEY_PZ_CODE,
+            "audit_period": sub.audit_period.slug,
+        },
+    )
+
+    response = client.post(
+        download_url,
+        {
+            "submit-data": "download-report",
+            "audit_id": sub.id,
+        },
+    )
+
+    assert response.status_code == 200
+
+    workbook = load_workbook(io.BytesIO(response.content))
+    overview_sheet = workbook["Errors - Overview"]
+
+    # Errors are listed in insertion order: row 0's fatal error, then row 1's field error
+    fatal_row = [cell.value for cell in overview_sheet[2]]
+    assert fatal_row[0] == 2  # CSV row number (0-based index + 2)
+    assert fatal_row[3].startswith(
+        "This row failed to save in the database and will be missing from your submission"
+    )
+    # The raw exception detail is retained after the explanation
+    assert "UNIQUE constraint failed" in fatal_row[3]
+
+    non_fatal_row = [cell.value for cell in overview_sheet[3]]
+    assert "This row failed to save" not in non_fatal_row[3]
