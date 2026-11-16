@@ -368,8 +368,8 @@ async def csv_upload(
                 f"Error saving patient for {pdu.pz_code} from {csv_file_name}[{patient_row_index}]: {error}"
             )
 
-            # We don't know what field caused the error so add to __all__
-            errors_to_return[patient_row_index]["__all__"].append(str(error))
+            # Highlight this row didn't save at all (__fatal__ used as a sentinel value to later identify which rows failed to save)
+            errors_to_return[patient_row_index]["__fatal__"].append(str(error))
 
     async def save_visits(patient, visit_forms):
         for visit_form, visit_row_index in visit_forms:
@@ -382,7 +382,7 @@ async def csv_upload(
                 logger.exception(
                     f"Error saving visit for {pdu.pz_code} from {csv_file_name}[{visit_row_index}]: {error}"
                 )
-                errors_to_return[visit_row_index]["__all__"].append(str(error))
+                errors_to_return[visit_row_index]["__fatal__"].append(str(error))
 
     async def process_rows_for_patient(rows, async_client):
         patient = None
