@@ -1,6 +1,8 @@
 from django.contrib.gis.db import models
 from django.core.exceptions import PermissionDenied
 
+from project.constants import CAN_ACCESS_ALL_PDUS, CAN_MANAGE_INACTIVE_PDUS
+
 
 class PaediatricDiabetesUnitManager(models.Manager):
     def get_pdu_for_request(self, request):
@@ -97,6 +99,10 @@ class PaediatricDiabetesUnit(models.Model):
     class Meta:
         verbose_name = "Paediatric Diabetes Unit"
         verbose_name_plural = "Paediatric Diabetes Units"
+        permissions = [
+            CAN_ACCESS_ALL_PDUS,
+            CAN_MANAGE_INACTIVE_PDUS,
+        ]
 
     def __str__(self):
         return self.pz_code

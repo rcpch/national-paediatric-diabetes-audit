@@ -9,7 +9,7 @@ from django.contrib.auth.signals import (
     user_logged_out,
     user_login_failed,
 )
-from django.db.models.signals import post_save, pre_delete, pre_save
+from django.db.models.signals import m2m_changed, post_save, pre_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
 
@@ -17,6 +17,8 @@ from django.utils import timezone
 from two_factor.signals import user_verified
 
 # RCPCH
+from project.constants import NPDA_AUDIT_TEAM_FULL_ACCESS
+
 from .general_functions import (
     create_session_object,
     get_client_ip,
@@ -211,6 +213,54 @@ def log_and_notify_user_changes(sender, instance, created, **kwargs):
 
                 # Send email notifications for critical changes
                 _send_change_notifications(instance, changes, current_user)
+
+
+@receiver(m2m_changed, sender=NPDAUser.groups.through)
+def notify_joined_rcpch_audit_team(sender, instance, action, reverse, pk_set, **kwargs):
+    """
+    Log and email the admins when a user joins the RCPCH audit team group.
+
+    The group grants national access, so this replaces the alert previously sent
+    when the is_rcpch_audit_team_member / is_rcpch_staff flags changed.
+
+    On post_add, pk_set only holds rows that were not already there, so
+    groups.set() re-saving an existing member doesn't trigger it. Code that
+    syncs groups from role should use groups.set(), not clear() then add().
+    """
+    if action != "post_add" or not pk_set:
+        return
+
+    from django.contrib.auth.models import Group
+
+    from .logging import get_current_user
+
+    audit_team_group = Group.objects.filter(name=NPDA_AUDIT_TEAM_FULL_ACCESS).first()
+    if audit_team_group is None:
+        return
+
+    if reverse:
+        # group.user_set.add(user): instance is the group, pk_set holds users
+        if instance.pk != audit_team_group.pk:
+            return
+        users = NPDAUser.objects.filter(pk__in=pk_set)
+    else:
+        # user.groups.add(group): instance is the user, pk_set holds groups
+        if audit_team_group.pk not in pk_set:
+            return
+        users = [instance]
+
+    current_user = get_current_user()
+    for user in users:
+        change = {
+            "groups": {"old": "-", "new": f"added to {NPDA_AUDIT_TEAM_FULL_ACCESS}"}
+        }
+        _log_user_activity(
+            user=user,
+            activity_type=13,  # CHANGED_ADMIN_FLAG
+            details=f"User added to {NPDA_AUDIT_TEAM_FULL_ACCESS} by {current_user.email if current_user else 'system'}",
+            current_user=current_user,
+        )
+        _send_admin_notification(user, change, current_user)
 
 
 @receiver(post_save, sender=OrganisationEmployer)

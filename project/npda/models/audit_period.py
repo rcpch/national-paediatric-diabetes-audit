@@ -3,6 +3,11 @@ from datetime import date
 from django.contrib.gis.db import models
 from django.core.exceptions import PermissionDenied, ValidationError
 
+from project.constants import (
+    CAN_EDIT_CLOSED_AUDIT_PERIODS,
+    CAN_VIEW_HIDDEN_AUDIT_PERIODS,
+)
+
 
 class AuditPeriodManager(models.Manager):
     def get_default_audit_period(self):
@@ -53,6 +58,12 @@ class AuditPeriod(models.Model):
     end_date = models.DateField()
 
     slug = models.SlugField(unique=True)
+
+    class Meta:
+        permissions = [
+            CAN_VIEW_HIDDEN_AUDIT_PERIODS,
+            CAN_EDIT_CLOSED_AUDIT_PERIODS,
+        ]
 
     # For compatibility with old code
     def audit_year(self):

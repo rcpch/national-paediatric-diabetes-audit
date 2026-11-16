@@ -2,17 +2,35 @@ from django.contrib.auth.management import create_permissions
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 
-from project.npda.models import NPDAUser, Patient, Submission, Transfer, Visit
+from project.npda.models import (
+    AuditPeriod,
+    Banner,
+    NPDAUser,
+    PaediatricDiabetesUnit,
+    Patient,
+    Submission,
+    Transfer,
+    Visit,
+)
 
 from ....constants import (  # group names; custom permissions
+    CAN_ACCESS_ALL_PDUS,
     CAN_ALLOCATE_NPDA_LEAD_CENTRE,
+    CAN_ASSIGN_RCPCH_AUDIT_TEAM_ROLE,
     CAN_CONSENT_TO_AUDIT_PARTICIPATION,
     CAN_DELETE_NPDA_LEAD_CENTRE,
+    CAN_EDIT_CLOSED_AUDIT_PERIODS,
     CAN_EDIT_NPDA_LEAD_CENTRE,
     CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING,
+    CAN_MANAGE_INACTIVE_PDUS,
+    CAN_MANAGE_USERS_IN_ANY_PDU,
     CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
+    CAN_OVERRIDE_DATA_UPLOAD_RULES,
+    CAN_PREVIEW_FEATURES,
+    CAN_RESET_USER_TWO_FACTOR,
     CAN_TRANSFER_NPDA_LEAD_CENTRE,
     CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
+    CAN_VIEW_HIDDEN_AUDIT_PERIODS,
     GROUPS,
     NPDA_AUDIT_TEAM_FULL_ACCESS,
     PATIENT_ACCESS,
@@ -30,6 +48,9 @@ def groups_seeder(
     npdauserContentType = ContentType.objects.get_for_model(NPDAUser)
     transferContentType = ContentType.objects.get_for_model(Transfer)
     submissionContentType = ContentType.objects.get_for_model(Submission)
+    pduContentType = ContentType.objects.get_for_model(PaediatricDiabetesUnit)
+    auditPeriodContentType = ContentType.objects.get_for_model(AuditPeriod)
+    bannerContentType = ContentType.objects.get_for_model(Banner)
 
     """
     Note view permissions include viewing users, but not creating, updating or deleting them
@@ -171,6 +192,43 @@ def groups_seeder(
         {"codename": "can_download_csv", "content_type": npdauserContentType},
     ]
 
+    """
+    Replace the is_rcpch_audit_team_member / is_rcpch_staff flags.
+    Only the RCPCH audit team group may hold these.
+    See documentation/docs/developer/rcpch-flags-retirement-plan.md
+    """
+    RCPCH_AUDIT_TEAM_ONLY_PERMISSIONS = [
+        {"codename": CAN_ACCESS_ALL_PDUS[0], "content_type": pduContentType},
+        {"codename": CAN_MANAGE_INACTIVE_PDUS[0], "content_type": pduContentType},
+        {
+            "codename": CAN_VIEW_HIDDEN_AUDIT_PERIODS[0],
+            "content_type": auditPeriodContentType,
+        },
+        {
+            "codename": CAN_EDIT_CLOSED_AUDIT_PERIODS[0],
+            "content_type": auditPeriodContentType,
+        },
+        {
+            "codename": CAN_OVERRIDE_DATA_UPLOAD_RULES[0],
+            "content_type": submissionContentType,
+        },
+        {
+            "codename": CAN_MANAGE_USERS_IN_ANY_PDU[0],
+            "content_type": npdauserContentType,
+        },
+        {
+            "codename": CAN_ASSIGN_RCPCH_AUDIT_TEAM_ROLE[0],
+            "content_type": npdauserContentType,
+        },
+        {
+            "codename": CAN_RESET_USER_TWO_FACTOR[0],
+            "content_type": npdauserContentType,
+        },
+        {"codename": CAN_PREVIEW_FEATURES[0], "content_type": npdauserContentType},
+        # built-in: see banners targeted at any role, to check how they look
+        {"codename": "view_banner", "content_type": bannerContentType},
+    ]
+
     COORDINATOR_CUSTOM_PERMISSIONS = [
         {
             "codename": CAN_TRANSFER_NPDA_LEAD_CENTRE[0],
@@ -229,6 +287,7 @@ def groups_seeder(
                 add_permissions_to_group(RCPCH_AUDIT_TEAM_PERMISSIONS, newGroup)
                 add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
                 add_permissions_to_group(FULL_ACCESS_CUSTOM_PERMISSIONS, newGroup)
+                add_permissions_to_group(RCPCH_AUDIT_TEAM_ONLY_PERMISSIONS, newGroup)
 
             # TRUST_AUDIT_TEAM_VIEW_ONLY = READER
             elif group == TRUST_AUDIT_TEAM_VIEW_ONLY:
@@ -281,6 +340,9 @@ def groups_seeder(
                     add_permissions_to_group(RCPCH_AUDIT_TEAM_PERMISSIONS, newGroup)
                     add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
                     add_permissions_to_group(FULL_ACCESS_CUSTOM_PERMISSIONS, newGroup)
+                    add_permissions_to_group(
+                        RCPCH_AUDIT_TEAM_ONLY_PERMISSIONS, newGroup
+                    )
 
                 # TRUST_AUDIT_TEAM_VIEW_ONLY = VIEWER
                 elif group == TRUST_AUDIT_TEAM_VIEW_ONLY:

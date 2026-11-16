@@ -1,6 +1,8 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from project.constants import CAN_OVERRIDE_DATA_UPLOAD_RULES
+
 
 class SubmissionManager(models.Manager):
     def get_submission_for_request(self, pdu, audit_period):
@@ -109,6 +111,7 @@ class Submission(models.Model):
         verbose_name = "Submission"
         verbose_name_plural = "Submissions"
         ordering = ("audit_year",)
+        permissions = [CAN_OVERRIDE_DATA_UPLOAD_RULES]
 
     def delete(self, *args, **kwargs):
         if self.submission_active:
