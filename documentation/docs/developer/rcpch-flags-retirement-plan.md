@@ -30,7 +30,8 @@ Define each in `project/constants/user.py`, add it to `PERMISSIONS` and to the m
 | `can_assign_rcpch_audit_team_role` | `NPDAUser` | The `role == RCPCH_AUDIT_TEAM` guards on create/update, `show_rcpch_team` |
 | `can_reset_user_two_factor` | `NPDAUser` | The `reset-two-factor` branch |
 | `can_preview_features` | `NPDAUser` | `home.feature_flags`, `avatar_dropdown.html` |
-| `can_see_all_banners` | `Banner` | `context_processors` banner targeting |
+
+**No new permission needed for banners:** use Django's built-in `view_banner` permission in place of the flag check in the `context_processors` banner targeting, and add `view_banner` to the audit team group in Phase 1.
 
 Keep the existing protections for superusers: an audit team member still can't change a superuser's email or reset their 2FA. Write these as `has_perm(...) and not target.is_superuser`.
 
@@ -58,7 +59,7 @@ The command never writes to the database.
 ### Phase 1 – add the permissions and fix the data (additive, safe to deploy)
 
 - Add the constants and `Meta.permissions` entries, then run `makemigrations` (permission-only migration).
-- Add the new permissions to the audit team lists in `groups_seeder` (`create_groups.py`).
+- Add the new permissions, and the built-in `view_banner`, to the audit team lists in `groups_seeder` (`create_groups.py`).
 - Add a data migration that creates the permissions and attaches them to the existing group. Deploys don't run `seed --mode=add_permissions_to_existing_groups`, so don't rely on that.
 - Add a data migration that sets `role = RCPCH_AUDIT_TEAM` for every user with either flag set, then re-syncs every user's groups from their role (fixes `group_mismatch`).
 - Add the `m2m_changed` alert for joining `npda_audit_team_full_access`.
