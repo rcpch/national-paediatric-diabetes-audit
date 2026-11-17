@@ -40,9 +40,13 @@ from ....constants import (  # group names; custom permissions
 )
 
 
-def groups_seeder(
-    run_create_groups=False, add_permissions_to_existing_groups=False, verbose=True
-):
+def groups_seeder(verbose=True, **_deprecated_kwargs):
+    """
+    Idempotently seed the NPDA groups and their permissions.
+
+    run_create_groups and add_permissions_to_existing_groups are accepted for
+    older callers but ignored: every run does both.
+    """
     patientContentType = ContentType.objects.get_for_model(Patient)
     visitContentType = ContentType.objects.get_for_model(Visit)
     npdauserContentType = ContentType.objects.get_for_model(NPDAUser)
@@ -274,103 +278,36 @@ def groups_seeder(
                     print(f"...Adding {codename}")
                 group_to_add.permissions.add(newPermission)
 
-    if add_permissions_to_existing_groups:
-        for group in GROUPS:
-            if verbose:
-                print(f"...adding permissions to {group}...")
-            # add permissions to group
-            newGroup = Group.objects.filter(name=group).get()
+    GROUP_PERMISSIONS = {
+        # RCPCH AUDIT TEAM
+        NPDA_AUDIT_TEAM_FULL_ACCESS: [
+            RCPCH_AUDIT_TEAM_PERMISSIONS,
+            EDITOR_CUSTOM_PERMISSIONS,
+            FULL_ACCESS_CUSTOM_PERMISSIONS,
+            RCPCH_AUDIT_TEAM_ONLY_PERMISSIONS,
+        ],
+        # READER
+        TRUST_AUDIT_TEAM_VIEW_ONLY: [READER_PERMISSIONS],
+        # EDITOR
+        TRUST_AUDIT_TEAM_EDIT_ACCESS: [EDITOR_PERMISSIONS, EDITOR_CUSTOM_PERMISSIONS],
+        # COORDINATOR
+        TRUST_AUDIT_TEAM_COORDINATOR_ACCESS: [
+            COORDINATOR_PERMISSIONS,
+            COORDINATOR_CUSTOM_PERMISSIONS,
+            EDITOR_CUSTOM_PERMISSIONS,
+        ],
+        PATIENT_ACCESS: [PATIENT_ACCESS_PERMISSIONS, PATIENT_PERMISSIONS],
+    }
 
-            # NPDA_AUDIT_TEAM_FULL_ACCESS = RCPCH AUDIT TEAM
-            if group == NPDA_AUDIT_TEAM_FULL_ACCESS:
-                # basic permissions
-                add_permissions_to_group(RCPCH_AUDIT_TEAM_PERMISSIONS, newGroup)
-                add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
-                add_permissions_to_group(FULL_ACCESS_CUSTOM_PERMISSIONS, newGroup)
-                add_permissions_to_group(RCPCH_AUDIT_TEAM_ONLY_PERMISSIONS, newGroup)
+    # Idempotent: creates any missing group, then adds any missing permission to
+    # every group, so permissions added to the lists above reach existing groups
+    # when s/start-prod runs this on deploy. It never removes a permission.
+    for group in GROUPS:
+        newGroup, created = Group.objects.get_or_create(name=group)
+        if verbose:
+            print(f"...{'created' if created else 'updating'} group: {group}")
+        for permissions_list in GROUP_PERMISSIONS[group]:
+            add_permissions_to_group(permissions_list, newGroup)
 
-            # TRUST_AUDIT_TEAM_VIEW_ONLY = READER
-            elif group == TRUST_AUDIT_TEAM_VIEW_ONLY:
-                # basic permissions
-                add_permissions_to_group(READER_PERMISSIONS, newGroup)
-
-            # TRUST_AUDIT_TEAM_EDIT_ACCESS = EDITOR
-            elif group == TRUST_AUDIT_TEAM_EDIT_ACCESS:
-                # basic permissions
-                add_permissions_to_group(EDITOR_PERMISSIONS, newGroup)
-                add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
-
-            # TRUST_AUDIT_TEAM_COORDINATOR_ACCESS = COORDINATOR
-            elif group == TRUST_AUDIT_TEAM_COORDINATOR_ACCESS:
-                # basic permissions
-                add_permissions_to_group(COORDINATOR_PERMISSIONS, newGroup)
-                add_permissions_to_group(COORDINATOR_CUSTOM_PERMISSIONS, newGroup)
-                add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
-
-            elif group == PATIENT_ACCESS:
-                # custom permissions
-                add_permissions_to_group(PATIENT_ACCESS_PERMISSIONS, newGroup)
-                # basic permissions
-                add_permissions_to_group(PATIENT_PERMISSIONS, newGroup)
-                add_permissions_to_group(PATIENT_PERMISSIONS, newGroup)
-
-            else:
-                if verbose:
-                    print("Error: group does not exist!")
-
-    if run_create_groups:
-        for group in GROUPS:
-            if not Group.objects.filter(name=group).exists():
-                if verbose:
-                    print(f"...creating group: {group}")
-                try:
-                    newGroup = Group.objects.create(name=group)
-                except Exception as error:
-                    if verbose:
-                        print(error)
-                    error = True
-
-                if verbose:
-                    print(f"...adding permissions to {group}...")
-                # add permissions to group
-
-                # NPDA_AUDIT_TEAM_FULL_ACCESS = RCPCH AUDIT TEAM
-                if group == NPDA_AUDIT_TEAM_FULL_ACCESS:
-                    # basic permissions
-                    add_permissions_to_group(RCPCH_AUDIT_TEAM_PERMISSIONS, newGroup)
-                    add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
-                    add_permissions_to_group(FULL_ACCESS_CUSTOM_PERMISSIONS, newGroup)
-                    add_permissions_to_group(
-                        RCPCH_AUDIT_TEAM_ONLY_PERMISSIONS, newGroup
-                    )
-
-                # TRUST_AUDIT_TEAM_VIEW_ONLY = VIEWER
-                elif group == TRUST_AUDIT_TEAM_VIEW_ONLY:
-                    # basic permissions
-                    add_permissions_to_group(READER_PERMISSIONS, newGroup)
-
-                # TRUST_AUDIT_TEAM_EDIT_ACCESS = EDITOR
-                elif group == TRUST_AUDIT_TEAM_EDIT_ACCESS:
-                    # basic permissions
-                    add_permissions_to_group(EDITOR_PERMISSIONS, newGroup)
-                    add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
-
-                # TRUST_AUDIT_TEAM_COORDINATOR_ACCESS = COORDINATOR
-                elif group == TRUST_AUDIT_TEAM_COORDINATOR_ACCESS:
-                    # basic permissions
-                    add_permissions_to_group(COORDINATOR_PERMISSIONS, newGroup)
-                    add_permissions_to_group(COORDINATOR_CUSTOM_PERMISSIONS, newGroup)
-                    add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
-
-                elif group == PATIENT_ACCESS:
-                    # custom permissions
-                    add_permissions_to_group(PATIENT_ACCESS_PERMISSIONS, newGroup)
-                    # basic permissions
-                    add_permissions_to_group(PATIENT_PERMISSIONS, newGroup)
-
-                else:
-                    if verbose:
-                        print("Error: group does not exist!")
-
-        if not verbose:
-            print("groups_seeder(verbose=False), no output, groups seeded.")
+    if not verbose:
+        print("groups_seeder(verbose=False), no output, groups seeded.")

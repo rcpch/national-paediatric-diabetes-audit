@@ -5,15 +5,14 @@ See documentation/docs/developer/rcpch-flags-retirement-plan.md
 - Only the RCPCH audit team group holds the permissions that replace the flags.
 - Changing a role, in the app or the Django admin, moves the user to the role's group.
 - Joining the audit team group logs and emails the admins.
-- The data migration gives flagged users the audit team role and syncs groups.
+- The group seeder, run on every deploy by s/start-prod, adds new permissions
+  to existing groups.
 """
 
-import importlib
 from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
-from django.apps import apps
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import Group
 from django.test import RequestFactory
@@ -39,14 +38,11 @@ from project.constants import (
     TRUST_AUDIT_TEAM_VIEW_ONLY,
 )
 from project.npda.admin import NPDAUserAdmin
+from project.npda.management.commands.create_groups import groups_seeder
 from project.npda.models import NPDAUser, VisitActivity
 from project.npda.tests.constants_for_tests import ALDER_HEY_PZ_CODE
 from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
 from project.npda.tests.utils import login_and_verify_user
-
-migration = importlib.import_module(
-    "project.npda.migrations.0048_sync_rcpch_audit_team_roles_and_groups"
-)
 
 RCPCH_AUDIT_TEAM_ONLY_PERMISSIONS = {
     CAN_ACCESS_ALL_PDUS[0],
@@ -111,15 +107,42 @@ def test_audit_team_member_has_permissions_via_role(seed_groups_fixture):
 
 
 @pytest.mark.django_db
-def test_migration_attaches_permissions_to_existing_group(seed_groups_fixture):
+def test_seeder_adds_new_permissions_to_existing_group(seed_groups_fixture):
+    """
+    Deploys run the seeder against existing groups, so it must add permissions
+    that are missing from them, not only seed groups it creates.
+    """
     group = _group(NPDA_AUDIT_TEAM_FULL_ACCESS)
     group.permissions.remove(
         *group.permissions.filter(codename__in=RCPCH_AUDIT_TEAM_ONLY_PERMISSIONS)
     )
 
-    migration.add_permissions_to_audit_team_group(apps, None)
+    groups_seeder(verbose=False)
 
     assert RCPCH_AUDIT_TEAM_ONLY_PERMISSIONS <= _codenames(group)
+
+
+@pytest.mark.django_db
+def test_seeder_creates_missing_group(seed_groups_fixture):
+    _group(PATIENT_ACCESS).delete()
+
+    groups_seeder(verbose=False)
+
+    assert "view_patient" in _codenames(_group(PATIENT_ACCESS))
+
+
+@pytest.mark.django_db
+def test_seeder_does_not_add_permissions_to_other_groups(seed_groups_fixture):
+    groups_seeder(verbose=False)
+    groups_seeder(verbose=False)
+
+    for name in (
+        TRUST_AUDIT_TEAM_VIEW_ONLY,
+        TRUST_AUDIT_TEAM_EDIT_ACCESS,
+        TRUST_AUDIT_TEAM_COORDINATOR_ACCESS,
+        PATIENT_ACCESS,
+    ):
+        assert not RCPCH_AUDIT_TEAM_ONLY_PERMISSIONS & _codenames(_group(name))
 
 
 # Changing role in the app
@@ -288,57 +311,3 @@ def test_joining_another_group_does_not_notify(seed_groups_fixture):
         user.groups.add(_group(TRUST_AUDIT_TEAM_EDIT_ACCESS))
 
     notify.assert_not_called()
-
-
-# Data migration
-
-
-@pytest.mark.django_db
-def test_migration_syncs_roles_flags_and_groups(seed_groups_fixture):
-    flagged_coordinator = NPDAUserFactory(
-        role=AUDIT_CENTRE_COORDINATOR,
-        is_rcpch_audit_team_member=True,
-        groups=[_group(TRUST_AUDIT_TEAM_COORDINATOR_ACCESS)],
-    )
-    staff_only = NPDAUserFactory(
-        role=AUDIT_CENTRE_EDITOR,
-        is_rcpch_staff=True,
-        groups=[_group(TRUST_AUDIT_TEAM_EDIT_ACCESS)],
-    )
-    audit_team_missing_flag = NPDAUserFactory(
-        role=RCPCH_AUDIT_TEAM,
-        is_rcpch_audit_team_member=True,
-        is_rcpch_staff=False,
-        groups=[_group(NPDA_AUDIT_TEAM_FULL_ACCESS)],
-    )
-    # the April 2025 bug: promoted to Coordinator, left in the Editor group
-    stale_group_coordinator = NPDAUserFactory(
-        role=AUDIT_CENTRE_COORDINATOR,
-        groups=[_group(TRUST_AUDIT_TEAM_EDIT_ACCESS)],
-    )
-    extra_group_editor = NPDAUserFactory(
-        role=AUDIT_CENTRE_EDITOR,
-        groups=[
-            _group(TRUST_AUDIT_TEAM_EDIT_ACCESS),
-            _group(TRUST_AUDIT_TEAM_VIEW_ONLY),
-        ],
-    )
-    no_group_reader = NPDAUserFactory(role=3)
-
-    migration.sync_roles_and_groups(apps, None)
-
-    for user in (flagged_coordinator, staff_only, audit_team_missing_flag):
-        user.refresh_from_db()
-        assert user.role == RCPCH_AUDIT_TEAM
-        assert user.is_rcpch_audit_team_member is True
-        assert user.is_rcpch_staff is True
-        assert _group_names(user) == {NPDA_AUDIT_TEAM_FULL_ACCESS}
-
-    stale_group_coordinator.refresh_from_db()
-    assert stale_group_coordinator.role == AUDIT_CENTRE_COORDINATOR
-    assert _group_names(stale_group_coordinator) == {
-        TRUST_AUDIT_TEAM_COORDINATOR_ACCESS
-    }
-
-    assert _group_names(extra_group_editor) == {TRUST_AUDIT_TEAM_EDIT_ACCESS}
-    assert _group_names(no_group_reader) == {TRUST_AUDIT_TEAM_VIEW_ONLY}

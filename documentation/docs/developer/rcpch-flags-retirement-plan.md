@@ -60,10 +60,8 @@ The command never writes to the database.
 
 - Add the constants and `Meta.permissions` entries (migration `0047_rcpch_audit_team_permissions`).
 - Add the new permissions, and the built-in `view_banner`, to `RCPCH_AUDIT_TEAM_ONLY_PERMISSIONS` in `groups_seeder` (`create_groups.py`).
-- Data migration `0048_sync_rcpch_audit_team_roles_and_groups`:
-    - creates the permissions and attaches them to the existing group. Deploys don't run `seed --mode=add_permissions_to_existing_groups`, so this can't be left to the seeder;
-    - sets `role = RCPCH_AUDIT_TEAM` for every user with either flag, and sets both flags for everyone with that role, so role and flags agree until Phase 3;
-    - puts every user in exactly the group for their role (fixes `group_mismatch`).
+- Make `groups_seeder` idempotent, like E12's: it creates any missing group and adds any missing permission to every group. `s/start-prod` already runs it on every deploy (`seed --mode=seed_groups_and_permissions`), but until now it only gave permissions to groups it created, so new permissions never reached existing groups. It never removes a permission.
+- The inconsistent users found by Phase 0 were fixed by hand, so no data migration is needed to change roles or re-sync groups.
 - Log and email the admins when a user joins `npda_audit_team_full_access` (`signals.notify_joined_rcpch_audit_team`). Group syncs use `groups.set()` so re-saving an existing member doesn't trigger it.
 - Django admin: changing a user's role syncs their group and flags (`NPDAUserAdmin.save_model`). `groups` is no longer editable there, because the admin saves m2m fields after `save_model` and would undo the sync.
 
