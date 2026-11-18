@@ -339,6 +339,10 @@ class NPDAUser(AbstractUser, PermissionsMixin):
             CAN_CONSENT_TO_AUDIT_PARTICIPATION,
             CAN_SUBMIT_CSV,
             CAN_DOWNLOAD_CSV,
+            CAN_MANAGE_USERS_IN_ANY_PDU,
+            CAN_ASSIGN_RCPCH_AUDIT_TEAM_ROLE,
+            CAN_RESET_USER_TWO_FACTOR,
+            CAN_PREVIEW_FEATURES,
         ]
         ordering = ("surname",)
 

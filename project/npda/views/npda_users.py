@@ -442,11 +442,10 @@ class NPDAUserUpdateView(
         user = form.save(commit=False)
         user.save()  # save the user first to ensure the user instance is updated and the updated_by and updated_at fields are set
         form.save_m2m()  # save the m2m fields (groups, employers, etc.)
-        # remove all groups and add the user to the right group
-        user.groups.clear()
-        group = group_for_role(user.role)
-        if group:
-            user.groups.add(group)
+        # put the user in exactly the group for their role. set() rather than
+        # clear() then add(), so the join-the-audit-team alert only fires on a
+        # real change (see signals.notify_joined_rcpch_audit_team)
+        user.groups.set([group_for_role(user.role)])
         return super().form_valid(form)
 
     def post(self, request: HttpRequest, *args: str, **kwargs) -> HttpResponse:

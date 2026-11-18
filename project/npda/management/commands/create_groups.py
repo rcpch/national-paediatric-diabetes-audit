@@ -2,17 +2,35 @@ from django.contrib.auth.management import create_permissions
 from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 
-from project.npda.models import NPDAUser, Patient, Submission, Transfer, Visit
+from project.npda.models import (
+    AuditPeriod,
+    Banner,
+    NPDAUser,
+    PaediatricDiabetesUnit,
+    Patient,
+    Submission,
+    Transfer,
+    Visit,
+)
 
 from ....constants import (  # group names; custom permissions
+    CAN_ACCESS_ALL_PDUS,
     CAN_ALLOCATE_NPDA_LEAD_CENTRE,
+    CAN_ASSIGN_RCPCH_AUDIT_TEAM_ROLE,
     CAN_CONSENT_TO_AUDIT_PARTICIPATION,
     CAN_DELETE_NPDA_LEAD_CENTRE,
+    CAN_EDIT_CLOSED_AUDIT_PERIODS,
     CAN_EDIT_NPDA_LEAD_CENTRE,
     CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING,
+    CAN_MANAGE_INACTIVE_PDUS,
+    CAN_MANAGE_USERS_IN_ANY_PDU,
     CAN_OPT_OUT_CHILD_FROM_INCLUSION_IN_AUDIT,
+    CAN_OVERRIDE_DATA_UPLOAD_RULES,
+    CAN_PREVIEW_FEATURES,
+    CAN_RESET_USER_TWO_FACTOR,
     CAN_TRANSFER_NPDA_LEAD_CENTRE,
     CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
+    CAN_VIEW_HIDDEN_AUDIT_PERIODS,
     GROUPS,
     NPDA_AUDIT_TEAM_FULL_ACCESS,
     PATIENT_ACCESS,
@@ -22,14 +40,21 @@ from ....constants import (  # group names; custom permissions
 )
 
 
-def groups_seeder(
-    run_create_groups=False, add_permissions_to_existing_groups=False, verbose=True
-):
+def groups_seeder(verbose=True, **_deprecated_kwargs):
+    """
+    Idempotently seed the NPDA groups and their permissions.
+
+    run_create_groups and add_permissions_to_existing_groups are accepted for
+    older callers but ignored: every run does both.
+    """
     patientContentType = ContentType.objects.get_for_model(Patient)
     visitContentType = ContentType.objects.get_for_model(Visit)
     npdauserContentType = ContentType.objects.get_for_model(NPDAUser)
     transferContentType = ContentType.objects.get_for_model(Transfer)
     submissionContentType = ContentType.objects.get_for_model(Submission)
+    pduContentType = ContentType.objects.get_for_model(PaediatricDiabetesUnit)
+    auditPeriodContentType = ContentType.objects.get_for_model(AuditPeriod)
+    bannerContentType = ContentType.objects.get_for_model(Banner)
 
     """
     Note view permissions include viewing users, but not creating, updating or deleting them
@@ -171,6 +196,43 @@ def groups_seeder(
         {"codename": "can_download_csv", "content_type": npdauserContentType},
     ]
 
+    """
+    Replace the is_rcpch_audit_team_member / is_rcpch_staff flags.
+    Only the RCPCH audit team group may hold these.
+    See documentation/docs/developer/rcpch-flags-retirement-plan.md
+    """
+    RCPCH_AUDIT_TEAM_ONLY_PERMISSIONS = [
+        {"codename": CAN_ACCESS_ALL_PDUS[0], "content_type": pduContentType},
+        {"codename": CAN_MANAGE_INACTIVE_PDUS[0], "content_type": pduContentType},
+        {
+            "codename": CAN_VIEW_HIDDEN_AUDIT_PERIODS[0],
+            "content_type": auditPeriodContentType,
+        },
+        {
+            "codename": CAN_EDIT_CLOSED_AUDIT_PERIODS[0],
+            "content_type": auditPeriodContentType,
+        },
+        {
+            "codename": CAN_OVERRIDE_DATA_UPLOAD_RULES[0],
+            "content_type": submissionContentType,
+        },
+        {
+            "codename": CAN_MANAGE_USERS_IN_ANY_PDU[0],
+            "content_type": npdauserContentType,
+        },
+        {
+            "codename": CAN_ASSIGN_RCPCH_AUDIT_TEAM_ROLE[0],
+            "content_type": npdauserContentType,
+        },
+        {
+            "codename": CAN_RESET_USER_TWO_FACTOR[0],
+            "content_type": npdauserContentType,
+        },
+        {"codename": CAN_PREVIEW_FEATURES[0], "content_type": npdauserContentType},
+        # built-in: see banners targeted at any role, to check how they look
+        {"codename": "view_banner", "content_type": bannerContentType},
+    ]
+
     COORDINATOR_CUSTOM_PERMISSIONS = [
         {
             "codename": CAN_TRANSFER_NPDA_LEAD_CENTRE[0],
@@ -216,99 +278,36 @@ def groups_seeder(
                     print(f"...Adding {codename}")
                 group_to_add.permissions.add(newPermission)
 
-    if add_permissions_to_existing_groups:
-        for group in GROUPS:
-            if verbose:
-                print(f"...adding permissions to {group}...")
-            # add permissions to group
-            newGroup = Group.objects.filter(name=group).get()
+    GROUP_PERMISSIONS = {
+        # RCPCH AUDIT TEAM
+        NPDA_AUDIT_TEAM_FULL_ACCESS: [
+            RCPCH_AUDIT_TEAM_PERMISSIONS,
+            EDITOR_CUSTOM_PERMISSIONS,
+            FULL_ACCESS_CUSTOM_PERMISSIONS,
+            RCPCH_AUDIT_TEAM_ONLY_PERMISSIONS,
+        ],
+        # READER
+        TRUST_AUDIT_TEAM_VIEW_ONLY: [READER_PERMISSIONS],
+        # EDITOR
+        TRUST_AUDIT_TEAM_EDIT_ACCESS: [EDITOR_PERMISSIONS, EDITOR_CUSTOM_PERMISSIONS],
+        # COORDINATOR
+        TRUST_AUDIT_TEAM_COORDINATOR_ACCESS: [
+            COORDINATOR_PERMISSIONS,
+            COORDINATOR_CUSTOM_PERMISSIONS,
+            EDITOR_CUSTOM_PERMISSIONS,
+        ],
+        PATIENT_ACCESS: [PATIENT_ACCESS_PERMISSIONS, PATIENT_PERMISSIONS],
+    }
 
-            # NPDA_AUDIT_TEAM_FULL_ACCESS = RCPCH AUDIT TEAM
-            if group == NPDA_AUDIT_TEAM_FULL_ACCESS:
-                # basic permissions
-                add_permissions_to_group(RCPCH_AUDIT_TEAM_PERMISSIONS, newGroup)
-                add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
-                add_permissions_to_group(FULL_ACCESS_CUSTOM_PERMISSIONS, newGroup)
+    # Idempotent: creates any missing group, then adds any missing permission to
+    # every group, so permissions added to the lists above reach existing groups
+    # when s/start-prod runs this on deploy. It never removes a permission.
+    for group in GROUPS:
+        newGroup, created = Group.objects.get_or_create(name=group)
+        if verbose:
+            print(f"...{'created' if created else 'updating'} group: {group}")
+        for permissions_list in GROUP_PERMISSIONS[group]:
+            add_permissions_to_group(permissions_list, newGroup)
 
-            # TRUST_AUDIT_TEAM_VIEW_ONLY = READER
-            elif group == TRUST_AUDIT_TEAM_VIEW_ONLY:
-                # basic permissions
-                add_permissions_to_group(READER_PERMISSIONS, newGroup)
-
-            # TRUST_AUDIT_TEAM_EDIT_ACCESS = EDITOR
-            elif group == TRUST_AUDIT_TEAM_EDIT_ACCESS:
-                # basic permissions
-                add_permissions_to_group(EDITOR_PERMISSIONS, newGroup)
-                add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
-
-            # TRUST_AUDIT_TEAM_COORDINATOR_ACCESS = COORDINATOR
-            elif group == TRUST_AUDIT_TEAM_COORDINATOR_ACCESS:
-                # basic permissions
-                add_permissions_to_group(COORDINATOR_PERMISSIONS, newGroup)
-                add_permissions_to_group(COORDINATOR_CUSTOM_PERMISSIONS, newGroup)
-                add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
-
-            elif group == PATIENT_ACCESS:
-                # custom permissions
-                add_permissions_to_group(PATIENT_ACCESS_PERMISSIONS, newGroup)
-                # basic permissions
-                add_permissions_to_group(PATIENT_PERMISSIONS, newGroup)
-                add_permissions_to_group(PATIENT_PERMISSIONS, newGroup)
-
-            else:
-                if verbose:
-                    print("Error: group does not exist!")
-
-    if run_create_groups:
-        for group in GROUPS:
-            if not Group.objects.filter(name=group).exists():
-                if verbose:
-                    print(f"...creating group: {group}")
-                try:
-                    newGroup = Group.objects.create(name=group)
-                except Exception as error:
-                    if verbose:
-                        print(error)
-                    error = True
-
-                if verbose:
-                    print(f"...adding permissions to {group}...")
-                # add permissions to group
-
-                # NPDA_AUDIT_TEAM_FULL_ACCESS = RCPCH AUDIT TEAM
-                if group == NPDA_AUDIT_TEAM_FULL_ACCESS:
-                    # basic permissions
-                    add_permissions_to_group(RCPCH_AUDIT_TEAM_PERMISSIONS, newGroup)
-                    add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
-                    add_permissions_to_group(FULL_ACCESS_CUSTOM_PERMISSIONS, newGroup)
-
-                # TRUST_AUDIT_TEAM_VIEW_ONLY = VIEWER
-                elif group == TRUST_AUDIT_TEAM_VIEW_ONLY:
-                    # basic permissions
-                    add_permissions_to_group(READER_PERMISSIONS, newGroup)
-
-                # TRUST_AUDIT_TEAM_EDIT_ACCESS = EDITOR
-                elif group == TRUST_AUDIT_TEAM_EDIT_ACCESS:
-                    # basic permissions
-                    add_permissions_to_group(EDITOR_PERMISSIONS, newGroup)
-                    add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
-
-                # TRUST_AUDIT_TEAM_COORDINATOR_ACCESS = COORDINATOR
-                elif group == TRUST_AUDIT_TEAM_COORDINATOR_ACCESS:
-                    # basic permissions
-                    add_permissions_to_group(COORDINATOR_PERMISSIONS, newGroup)
-                    add_permissions_to_group(COORDINATOR_CUSTOM_PERMISSIONS, newGroup)
-                    add_permissions_to_group(EDITOR_CUSTOM_PERMISSIONS, newGroup)
-
-                elif group == PATIENT_ACCESS:
-                    # custom permissions
-                    add_permissions_to_group(PATIENT_ACCESS_PERMISSIONS, newGroup)
-                    # basic permissions
-                    add_permissions_to_group(PATIENT_PERMISSIONS, newGroup)
-
-                else:
-                    if verbose:
-                        print("Error: group does not exist!")
-
-        if not verbose:
-            print("groups_seeder(verbose=False), no output, groups seeded.")
+    if not verbose:
+        print("groups_seeder(verbose=False), no output, groups seeded.")

@@ -129,6 +129,59 @@ CAN_DOWNLOAD_CSV = (
     "Can download a CSV file from NPDA.",
 )
 
+# RCPCH audit team. These replace the is_rcpch_audit_team_member and
+# is_rcpch_staff flags and are only granted to NPDA_AUDIT_TEAM_FULL_ACCESS.
+# See documentation/docs/developer/rcpch-flags-retirement-plan.md
+
+# PaediatricDiabetesUnit
+CAN_ACCESS_ALL_PDUS = (
+    "can_access_all_pdus",
+    "Can view any PDU, and its users, patients and submissions, nationally.",
+)
+
+CAN_MANAGE_INACTIVE_PDUS = (
+    "can_manage_inactive_pdus",
+    "Can add users to inactive PDUs.",
+)
+
+# AuditPeriod
+CAN_VIEW_HIDDEN_AUDIT_PERIODS = (
+    "can_view_hidden_audit_periods",
+    "Can view audit periods that are not yet visible.",
+)
+
+CAN_EDIT_CLOSED_AUDIT_PERIODS = (
+    "can_edit_closed_audit_periods",
+    "Can create, edit and delete data in a closed audit period.",
+)
+
+# Submission
+CAN_OVERRIDE_DATA_UPLOAD_RULES = (
+    "can_override_data_upload_rules",
+    "Can override data upload rules, such as switching between CSV and questionnaire submissions.",
+)
+
+# NPDAUser
+CAN_MANAGE_USERS_IN_ANY_PDU = (
+    "can_manage_users_in_any_pdu",
+    "Can create, edit, activate and deactivate users in any PDU.",
+)
+
+CAN_ASSIGN_RCPCH_AUDIT_TEAM_ROLE = (
+    "can_assign_rcpch_audit_team_role",
+    "Can give a user the RCPCH Audit Team role.",
+)
+
+CAN_RESET_USER_TWO_FACTOR = (
+    "can_reset_user_two_factor",
+    "Can reset two factor authentication for a user.",
+)
+
+CAN_PREVIEW_FEATURES = (
+    "can_preview_features",
+    "Can turn on feature previews.",
+)
+
 PERMISSIONS = (
     CAN_LOCK_CHILD_PATIENT_DATA_FROM_EDITING,
     CAN_UNLOCK_CHILD_PATIENT_DATA_FROM_EDITING,
@@ -141,4 +194,13 @@ PERMISSIONS = (
     CAN_PUBLISH_NPDA_DATA,
     CAN_SUBMIT_CSV,
     CAN_DOWNLOAD_CSV,
+    CAN_ACCESS_ALL_PDUS,
+    CAN_MANAGE_INACTIVE_PDUS,
+    CAN_VIEW_HIDDEN_AUDIT_PERIODS,
+    CAN_EDIT_CLOSED_AUDIT_PERIODS,
+    CAN_OVERRIDE_DATA_UPLOAD_RULES,
+    CAN_MANAGE_USERS_IN_ANY_PDU,
+    CAN_ASSIGN_RCPCH_AUDIT_TEAM_ROLE,
+    CAN_RESET_USER_TWO_FACTOR,
+    CAN_PREVIEW_FEATURES,
 )

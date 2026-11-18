@@ -58,11 +58,14 @@ The command never writes to the database.
 
 ### Phase 1 – add the permissions and fix the data (additive, safe to deploy)
 
-- Add the constants and `Meta.permissions` entries, then run `makemigrations` (permission-only migration).
-- Add the new permissions, and the built-in `view_banner`, to the audit team lists in `groups_seeder` (`create_groups.py`).
-- Add a data migration that creates the permissions and attaches them to the existing group. Deploys don't run `seed --mode=add_permissions_to_existing_groups`, so don't rely on that.
-- Add a data migration that sets `role = RCPCH_AUDIT_TEAM` for every user with either flag set, then re-syncs every user's groups from their role (fixes `group_mismatch`).
-- Add the `m2m_changed` alert for joining `npda_audit_team_full_access`.
+- Add the constants and `Meta.permissions` entries (migration `0047_rcpch_audit_team_permissions`).
+- Add the new permissions, and the built-in `view_banner`, to `RCPCH_AUDIT_TEAM_ONLY_PERMISSIONS` in `groups_seeder` (`create_groups.py`).
+- Make `groups_seeder` idempotent, like E12's: it creates any missing group and adds any missing permission to every group. `s/start-prod` already runs it on every deploy (`seed --mode=seed_groups_and_permissions`), but until now it only gave permissions to groups it created, so new permissions never reached existing groups. It never removes a permission.
+- The inconsistent users found by Phase 0 were fixed by hand, so no data migration is needed to change roles or re-sync groups.
+- Log and email the admins when a user joins `npda_audit_team_full_access` (`signals.notify_joined_rcpch_audit_team`). Group syncs use `groups.set()` so re-saving an existing member doesn't trigger it.
+- Django admin: changing a user's role syncs their group and flags (`NPDAUserAdmin.save_model`). `groups` is no longer editable there, because the admin saves m2m fields after `save_model` and would undo the sync.
+
+**Why some Coordinators were only in the Editor group:** until April 2025 (437a926d) the edit-user view changed `role` without changing `groups`, so users promoted from Editor (many created by the March 2025 user import) kept the Editor group. The view has synced groups since; a regression test now covers it. The Django admin could still cause it until this phase.
 
 ### Phase 2 – switch the checks
 

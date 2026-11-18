@@ -3,6 +3,9 @@ from django.contrib import admin
 from django.contrib.sessions.models import Session
 from two_factor.admin import AdminSiteOTPRequiredMixin
 
+from project.constants import RCPCH_AUDIT_TEAM
+
+from .general_functions.group_for_group import group_for_role
 from .models import (
     AuditPeriod,
     Banner,
@@ -60,6 +63,26 @@ class NPDAUserAdmin(admin.ModelAdmin):
         "surname__icontains",
     )
     list_display = ("email", "first_name", "surname", "role")
+    # Groups follow role (see save_model). Leaving them editable here would let
+    # the admin's m2m save, which runs after save_model, undo the sync.
+    exclude = ("groups",)
+
+    def save_model(self, request, obj, form, change):
+        """
+        Keep the RCPCH flags and the user's group in step with a role set or
+        changed in the admin: role is the source of truth for national access.
+        Flags edited without a role change are kept, so superusers can triage
+        individual audit_rcpch_user_flags findings here.
+        """
+        sync_from_role = obj.role is not None and (
+            not change or "role" in form.changed_data
+        )
+        if sync_from_role:
+            obj.is_rcpch_audit_team_member = obj.role == RCPCH_AUDIT_TEAM
+            obj.is_rcpch_staff = obj.role == RCPCH_AUDIT_TEAM
+        super().save_model(request, obj, form, change)
+        if sync_from_role:
+            obj.groups.set([group_for_role(obj.role)])
 
 
 @admin.register(Patient)
