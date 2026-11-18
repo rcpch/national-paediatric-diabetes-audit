@@ -13,6 +13,7 @@ from datetime import timedelta
 from http import HTTPStatus
 
 import pytest
+from django.core import mail
 from django.core.exceptions import ValidationError
 from django.test import override_settings
 from django.urls import reverse
@@ -134,6 +135,72 @@ def test_confirm_login_allowed_deactivates_user_inactive_beyond_period(
     assert VisitActivity.CHANGED_ADMIN_FLAG in VisitActivity.objects.filter(
         npdauser=user
     ).values_list("activity", flat=True)
+
+
+@pytest.mark.django_db
+@override_settings(
+    ACCOUNT_INACTIVITY_DEACTIVATION_PERIOD_DAYS=INACTIVITY_PERIOD_DAYS,
+    CHANGE_NOTIFICATION_EMAILS=["audit-team@rcpch.ac.uk"],
+)
+def test_automatic_deactivation_does_not_email_admins(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+):
+    """
+    Automatic deactivation is routine housekeeping rather than a permission
+    change made by an administrator: it is logged (with VisitActivity
+    entries) but the admins are not emailed.
+    """
+    user = NPDAUserFactory(
+        role=AUDIT_CENTRE_EDITOR,
+        last_login=timezone.now() - timedelta(days=800),
+        organisation_employers=[ALDER_HEY_PZ_CODE],
+    )
+    # The factory-created user triggers user creation and PDU assignment
+    # notification emails
+    mail.outbox = []
+
+    form = CaptchaAuthenticationForm(request=None)
+    with pytest.raises(ValidationError):
+        form.confirm_login_allowed(user)
+
+    assert len(mail.outbox) == 0
+
+    # The deactivation is still audited
+    assert VisitActivity.objects.filter(
+        npdauser=user, activity=VisitActivity.ACCOUNT_DEACTIVATED_INACTIVITY
+    ).exists()
+    assert VisitActivity.objects.filter(
+        npdauser=user, activity=VisitActivity.CHANGED_ADMIN_FLAG
+    ).exists()
+
+
+@pytest.mark.django_db
+@override_settings(CHANGE_NOTIFICATION_EMAILS=["audit-team@rcpch.ac.uk"])
+def test_deactivation_by_an_administrator_still_emails_admins(
+    seed_groups_fixture,
+    seed_users_fixture,
+    seed_audit_periods_fixture,
+):
+    """
+    Only the automatic deactivation is silent: an is_active change made
+    outside the inactivity flow still notifies the admins.
+    """
+    user = NPDAUserFactory(
+        role=AUDIT_CENTRE_EDITOR,
+        last_login=timezone.now() - timedelta(days=30),
+        organisation_employers=[ALDER_HEY_PZ_CODE],
+    )
+    mail.outbox = []
+
+    user.is_active = False
+    user.save()
+
+    assert len(mail.outbox) == 1
+    email = mail.outbox[0]
+    assert "Permission Changes" in email.subject
+    assert "is_active" in email.body
 
 
 @pytest.mark.django_db
