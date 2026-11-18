@@ -6,9 +6,7 @@ from project.constants import CAN_ACCESS_ALL_PDUS, CAN_MANAGE_INACTIVE_PDUS
 
 class PaediatricDiabetesUnitManager(models.Manager):
     def get_pdu_for_request(self, request):
-        can_view_all_data = (
-            request.user.is_superuser or request.user.is_rcpch_audit_team_member
-        )
+        can_view_all_data = request.user.has_perm("npda.can_access_all_pdus")
 
         pz_code = request.resolver_match.kwargs["pz_code"]
 

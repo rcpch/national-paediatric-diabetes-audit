@@ -93,7 +93,7 @@ class SubmissionsListView(
             "paediatric_diabetes_unit": self.pdu,
         }
 
-        if self.request.user.is_rcpch_audit_team_member:
+        if self.request.user.has_perm("npda.can_access_all_pdus"):
             del base_args["paediatric_diabetes_unit"]
             # Don't show inactive submissions to admins, it makes the page very heavy
             base_args["submission_active"] = True
@@ -156,7 +156,7 @@ class SubmissionsListView(
                 visit_count=Count("visit"),
             )
 
-        if self.request.user.is_rcpch_audit_team_member:
+        if self.request.user.has_perm("npda.can_access_all_pdus"):
             selected_audit_period = self.audit_period
             # Start with ALL active PDUs, not just those with submissions
             chart_data = (
@@ -226,7 +226,7 @@ class SubmissionsListView(
         submission = Submission.objects.get(pk=submission_id)
 
         if (
-            user.is_rcpch_audit_team_member
+            user.has_perm("npda.can_access_all_pdus")
             or submission.paediatric_diabetes_unit in user.organisation_employers.all()
         ):
             return submission
@@ -414,10 +414,7 @@ class SubmissionsListView(
             )
 
         if button_name == "switch-to-questionnaire":
-            if (
-                not request.user.is_rcpch_audit_team_member
-                and not request.user.is_superuser
-            ):
+            if not request.user.has_perm("npda.can_override_data_upload_rules"):
                 raise PermissionDenied(
                     "You do not have permission to switch submission type.",
                 )
@@ -452,10 +449,7 @@ class SubmissionsListView(
             )
 
         if button_name == "switch-to-csv":
-            if (
-                not request.user.is_rcpch_audit_team_member
-                and not request.user.is_superuser
-            ):
+            if not request.user.has_perm("npda.can_override_data_upload_rules"):
                 raise PermissionDenied(
                     "You do not have permission to switch submission type.",
                 )
@@ -632,8 +626,8 @@ def upload_csv(request, audit_period, pdu):
             message = f"PDU Number in CSV file ({unique_pdu_numbers[0]}) does not match the PDU you are looking at ({pdu.pz_code}). Please upload a file with the correct PDU Number."
             return upload_error(message)
 
-        if not audit_period.is_open and not (
-            request.user.is_superuser or request.user.is_rcpch_audit_team_member
+        if not audit_period.is_open and not request.user.has_perm(
+            "npda.can_edit_closed_audit_periods"
         ):
             raise PermissionDenied(f"Upload is closed for {audit_period}.")
 

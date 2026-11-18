@@ -24,9 +24,7 @@ class AuditPeriodManager(models.Manager):
         return audit_period
 
     def get_audit_period_for_request(self, request):
-        can_view_all_data = (
-            request.user.is_superuser or request.user.is_rcpch_audit_team_member
-        )
+        can_view_all_data = request.user.has_perm("npda.can_view_hidden_audit_periods")
 
         slug = request.resolver_match.kwargs["audit_period"]
 
@@ -81,7 +79,7 @@ class AuditPeriod(models.Model):
 
     def is_allowed_to_edit(self, user):
         return (
-            user and (user.is_superuser or user.is_rcpch_audit_team_member)
+            user and user.has_perm("npda.can_edit_closed_audit_periods")
         ) or self.is_open
 
     def kpi_calculation_date(self):

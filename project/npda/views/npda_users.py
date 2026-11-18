@@ -78,8 +78,7 @@ def get_user_home_page(audit_period_slug, user):
         return reverse("home")
 
     if (
-        user.is_superuser
-        or user.is_rcpch_audit_team_member
+        user.has_perm("npda.can_access_all_pdus")
         or user.paediatric_diabetes_units.count() > 1
     ):
         return reverse("new-home", kwargs={"audit_period": audit_period_slug})
@@ -112,7 +111,7 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Filter
         """
         queryset = super().get_queryset()
 
-        if not self.request.user.is_rcpch_audit_team_member:
+        if not self.request.user.has_perm("npda.can_access_all_pdus"):
             queryset = queryset.filter(
                 organisation_employers__in=self.request.user.organisation_employers.all()
             )
@@ -124,7 +123,7 @@ class NPDAUserListView(LoginAndOTPRequiredMixin, PermissionRequiredMixin, Filter
 
         queryset = queryset.order_by("-is_active", "surname")
 
-        if self.request.user.is_rcpch_audit_team_member:
+        if self.request.user.has_perm("npda.can_access_all_pdus"):
             # Distinct required to remove duplicates that come from the __in query
             queryset = queryset.distinct()
 
@@ -177,12 +176,11 @@ class NPDAUserCreateView(
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["show_rcpch_team"] = (
-            self.request.user.is_superuser
-            or self.request.user.is_rcpch_audit_team_member
+        context["show_rcpch_team"] = self.request.user.has_perm(
+            "npda.can_assign_rcpch_audit_team_role"
         )
-        context["show_rcpch_staff_box"] = (
-            self.request.user.is_superuser or self.request.user.is_rcpch_staff
+        context["show_rcpch_staff_box"] = self.request.user.has_perm(
+            "npda.can_assign_rcpch_audit_team_role"
         )
         context["title"] = "Add New NPDA User"
         context["button_title"] = "Add"
@@ -200,9 +198,8 @@ class NPDAUserCreateView(
             "pz_code", flat=True
         )
 
-        if new_user_pz_code not in my_pz_codes and not (
-            self.request.user.is_superuser
-            or self.request.user.is_rcpch_audit_team_member
+        if new_user_pz_code not in my_pz_codes and not self.request.user.has_perm(
+            "npda.can_manage_users_in_any_pdu"
         ):
             raise PermissionDenied(
                 f"You do not have permission to add users to {new_user_pz_code}. Contact the NPDA for assistance."
@@ -210,32 +207,29 @@ class NPDAUserCreateView(
 
         new_user_pdu = PaediatricDiabetesUnit.objects.get(pz_code=new_user_pz_code)
 
-        if not new_user_pdu.active and not (
-            self.request.user.is_rcpch_audit_team_member
-            or self.request.user.is_superuser
+        if not new_user_pdu.active and not self.request.user.has_perm(
+            "npda.can_manage_inactive_pdus"
         ):
             raise PermissionDenied(
                 f"{new_user_pz_code} is inactive. Contact the NPDA for assistance."
             )
 
         if form.cleaned_data["role"] == RCPCH_AUDIT_TEAM and not (
-            self.request.user.is_superuser
-            or self.request.user.is_rcpch_audit_team_member
+            self.request.user.has_perm("npda.can_assign_rcpch_audit_team_role")
         ):
             raise PermissionDenied(
                 "You do not have permission to add a user with RCPCH Audit Team role."
             )
 
         if form.cleaned_data["is_rcpch_audit_team_member"] and not (
-            self.request.user.is_superuser
-            or self.request.user.is_rcpch_audit_team_member
+            self.request.user.has_perm("npda.can_assign_rcpch_audit_team_role")
         ):
             raise PermissionDenied(
                 "You do not have permission to add a user with the is_rcpch_audit_team_member flag."
             )
 
         if form.cleaned_data["is_rcpch_staff"] and not (
-            self.request.user.is_superuser or self.request.user.is_rcpch_staff
+            self.request.user.has_perm("npda.can_assign_rcpch_audit_team_role")
         ):
             raise PermissionDenied(
                 "You do not have permission to add a user with the is_rcpch_staff flag."
@@ -326,7 +320,7 @@ class NPDAUserUpdateView(
         # A normal audit team member can't change the email of a superuser, preventing privilege escalation by changing the email
         # to one they control, resetting the password and 2fa then logging in.
         if (
-            self.request.user.is_rcpch_audit_team_member
+            self.request.user.has_perm("npda.can_manage_users_in_any_pdu")
             and not user_to_update.is_superuser
         ):
             return []
@@ -334,8 +328,10 @@ class NPDAUserUpdateView(
         # https://github.com/rcpch/national-paediatric-diabetes-audit/issues/1159
         # A coordinator can only change the role or email of a user if they share exactly the same PDU assignments
         # This prevents a coordinator accessing other PDUs by changing the email to one they control and doing a password reset
+        # Check the target's role, not has_perm: has_perm is False for inactive
+        # users, which would let a coordinator edit a deactivated audit team member.
         if self.user_in_exactly_the_same_pdus_as_requesting_user() and not (
-            user_to_update.is_superuser or user_to_update.is_rcpch_audit_team_member
+            user_to_update.is_superuser or user_to_update.role == RCPCH_AUDIT_TEAM
         ):
             return []
 
@@ -362,12 +358,11 @@ class NPDAUserUpdateView(
 
         user = NPDAUser.objects.get(pk=self.kwargs["pk"])
 
-        context["show_rcpch_team"] = (
-            self.request.user.is_superuser
-            or self.request.user.is_rcpch_audit_team_member
+        context["show_rcpch_team"] = self.request.user.has_perm(
+            "npda.can_assign_rcpch_audit_team_role"
         )
-        context["show_rcpch_staff_box"] = (
-            self.request.user.is_superuser or self.request.user.is_rcpch_staff
+        context["show_rcpch_staff_box"] = self.request.user.has_perm(
+            "npda.can_assign_rcpch_audit_team_role"
         )
         context["title"] = "Edit NPDA User Details"
         context["button_title"] = "Save"
@@ -398,23 +393,21 @@ class NPDAUserUpdateView(
             )
 
         if form.cleaned_data["role"] == RCPCH_AUDIT_TEAM and not (
-            self.request.user.is_superuser
-            or self.request.user.is_rcpch_audit_team_member
+            self.request.user.has_perm("npda.can_assign_rcpch_audit_team_role")
         ):
             raise PermissionDenied(
                 "You do not have permission to grant the RCPCH Audit Team role."
             )
 
         if form.cleaned_data["is_rcpch_audit_team_member"] and not (
-            self.request.user.is_superuser
-            or self.request.user.is_rcpch_audit_team_member
+            self.request.user.has_perm("npda.can_assign_rcpch_audit_team_role")
         ):
             raise PermissionDenied(
                 "You do not have permission to set the is_rcpch_audit_team_member flag."
             )
 
         if form.cleaned_data["is_rcpch_staff"] and not (
-            self.request.user.is_superuser or self.request.user.is_rcpch_staff
+            self.request.user.has_perm("npda.can_assign_rcpch_audit_team_role")
         ):
             raise PermissionDenied(
                 "You do not have permission to set the is_rcpch_staff flag."
@@ -486,10 +479,7 @@ class NPDAUserUpdateView(
                 )
                 raise PermissionDenied()
 
-            is_admin = (
-                self.request.user.is_superuser
-                or self.request.user.is_rcpch_audit_team_member
-            )
+            is_admin = self.request.user.has_perm("npda.can_manage_users_in_any_pdu")
 
             if not request.user.has_perm("npda.delete_npdauser") and not is_admin:
                 logger.warning(
@@ -531,7 +521,7 @@ class NPDAUserUpdateView(
                 raise PermissionDenied()
 
         elif "reset-two-factor" in request.POST:
-            if request.user.is_superuser or request.user.is_rcpch_audit_team_member:
+            if request.user.has_perm("npda.can_reset_user_two_factor"):
                 npda_user = NPDAUser.objects.get(pk=self.kwargs["pk"])
 
                 if npda_user.is_superuser and not request.user.is_superuser:
@@ -567,7 +557,7 @@ class NPDAUserUpdateView(
     def dispatch(self, request, *args, **kwargs):
         requested_user = self.get_object()
 
-        if request.user.is_superuser or request.user.is_rcpch_audit_team_member:
+        if request.user.has_perm("npda.can_manage_users_in_any_pdu"):
             return super().dispatch(request, *args, **kwargs)
 
         if (
@@ -613,8 +603,7 @@ def npdauser_pdu_update(request, pk):
     # further down could otherwise be satisfied while the target user (`pk`) is
     # a completely arbitrary existing user unrelated to the requester.
     if not (
-        request.user.is_superuser
-        or request.user.is_rcpch_audit_team_member
+        request.user.has_perm("npda.can_manage_users_in_any_pdu")
         or my_pz_codes & their_pz_codes
     ):
         raise PermissionDenied(
@@ -636,8 +625,7 @@ def npdauser_pdu_update(request, pk):
         )
 
         if employer_to_delete is not None and not (
-            request.user.is_superuser
-            or request.user.is_rcpch_audit_team_member
+            request.user.has_perm("npda.can_manage_users_in_any_pdu")
             or employer_to_delete.paediatric_diabetes_unit.pz_code in my_pz_codes
         ):
             raise PermissionDenied(
@@ -660,8 +648,7 @@ def npdauser_pdu_update(request, pk):
         )
 
         if not (
-            request.user.is_superuser
-            or request.user.is_rcpch_audit_team_member
+            request.user.has_perm("npda.can_manage_users_in_any_pdu")
             or selected_employer.paediatric_diabetes_unit.pz_code in my_pz_codes
         ):
             raise PermissionDenied(
@@ -691,8 +678,8 @@ def npdauser_pdu_update(request, pk):
                 "pz_code", flat=True
             )
 
-            if new_employer_pz_code not in my_pz_codes and not (
-                request.user.is_superuser or request.user.is_rcpch_audit_team_member
+            if new_employer_pz_code not in my_pz_codes and not request.user.has_perm(
+                "npda.can_manage_users_in_any_pdu"
             ):
                 raise PermissionDenied(
                     f"You do not have permission to add users to {new_employer_pz_code}. Contact the NPDA for assistance."
@@ -703,8 +690,8 @@ def npdauser_pdu_update(request, pk):
                 pz_code=new_employer_pz_code
             )
 
-            if not selected_pdu.active and not (
-                request.user.is_rcpch_audit_team_member or request.user.is_superuser
+            if not selected_pdu.active and not request.user.has_perm(
+                "npda.can_manage_inactive_pdus"
             ):
                 raise PermissionDenied(
                     f"{selected_pdu} is inactive. Contact the NPDA for assistance."

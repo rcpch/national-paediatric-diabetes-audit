@@ -71,6 +71,8 @@ The command never writes to the database.
 
 - Replace each call site in the table with `user.has_perm("npda.<codename>")`, or `perms.npda.<codename>` in templates.
 - Where code needs to know *what a user is* rather than *what they may do* (for example the user table badges and `user_roles()`), use `user.role == RCPCH_AUDIT_TEAM`.
+- When the check is about the *target* user, use role, not `has_perm`: `has_perm` is False for inactive users. `NPDAUserUpdateView.get_restricted_fields` does this, so a coordinator can't change the email of a deactivated audit team member.
+- Left for Phase 3, because they read or write the flags themselves: the guards on setting the flags in the user create and update views (now gated on `can_assign_rcpch_audit_team_role`), the user table badges, `user_roles()`, `signals.py`, `create_dev_users` and `NPDAUserAdmin.save_model`.
 
 ### Phase 3 – remove the fields
 

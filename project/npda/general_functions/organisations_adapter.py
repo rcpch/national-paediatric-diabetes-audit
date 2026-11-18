@@ -13,11 +13,7 @@ def paediatric_diabetes_units_for_user(requesting_user, user_instance=None):
 
     if user_instance:
         # populate the select field with paediatric diabetes units that the user is not already affiliated with
-        if (
-            requesting_user.is_superuser
-            or requesting_user.is_rcpch_audit_team_member
-            or requesting_user.is_rcpch_staff
-        ):
+        if requesting_user.has_perm("npda.can_access_all_pdus"):
             # return all paediatric diabetes units excluding those were the user is employed
             filtered_pdus = PaediatricDiabetesUnit.objects.all().exclude(
                 npda_users__npda_user=user_instance
@@ -29,11 +25,7 @@ def paediatric_diabetes_units_for_user(requesting_user, user_instance=None):
             )
     else:
         # no user instance is provided - therefore need the organisation_choices to be populated with all organisations based on requesting_user user permissions
-        if (
-            requesting_user.is_superuser
-            or requesting_user.is_rcpch_audit_team_member
-            or requesting_user.is_rcpch_staff
-        ):
+        if requesting_user.has_perm("npda.can_access_all_pdus"):
             # return all paediatric diabetes units
             filtered_pdus = PaediatricDiabetesUnit.objects.all()
 

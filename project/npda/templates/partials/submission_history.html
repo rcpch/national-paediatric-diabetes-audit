@@ -2,7 +2,7 @@
 {% load npda_tags %}
 {% load humanize %}
 <div>
-  {% if not request.user.is_rcpch_audit_team_member %}
+  {% if not perms.npda.can_access_all_pdus %}
     <div class="flex flex-row items-center">
       <h1 class="font-montserrat text-md text-rcpch_dark_blue font-semibold">
         All Submissions for {{ lead_organisation }} ({{ pz_code }})
@@ -38,7 +38,7 @@
               <td>Audit Year</td>
               <td>Patient Qty</td>
               <td>Status</td>
-              {% if request.user.is_rcpch_audit_team_member %}<td>PDU</td>{% endif %}
+              {% if perms.npda.can_access_all_pdus %}<td>PDU</td>{% endif %}
               <td>Actions</td>
             </tr>
           </thead>
@@ -85,7 +85,7 @@
                       </span>
                     {% endif %}
                   </td>
-                  {% if request.user.is_rcpch_audit_team_member %}
+                  {% if perms.npda.can_access_all_pdus %}
                     <td>
                       {{ submission.paediatric_diabetes_unit.pz_code }} ({{ submission.paediatric_diabetes_unit.lead_organisation_name }})
                     </td>

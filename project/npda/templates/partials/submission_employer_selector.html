@@ -6,7 +6,7 @@
     <h3 class="font-bold">Important Information</h3>
     <div class="text-xs">
       You are about to upload data to the NPDA for <strong>{{ pdu.pz_code }} ({{ pdu.lead_organisation_name }})</strong>.
-      {% if not request.user.is_rcpch_audit_team_member and pdu_choices|length > 1 %}
+      {% if not perms.npda.can_access_all_pdus and pdu_choices|length > 1 %}
         <p class="text-xs mt-2 mb-2">
           If this is incorrect, please select the correct employer below.
         </p>
@@ -20,7 +20,7 @@
           {% endfor %}
         </form>
       {% endif %}
-      {% if request.user.is_rcpch_audit_team_member or request.user.is_rcpch_staff or request.user.is_superuser %}
+      {% if perms.npda.can_access_all_pdus %}
         <p class="text-xs mt-2 mb-2">
           If you are an RCPCH staff member or part of the audit team, you can upload data for any employer. To change the selected paediatric diabetes unit user the filter button in the top right-hand corner.
         </p>

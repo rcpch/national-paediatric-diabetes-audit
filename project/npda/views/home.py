@@ -56,7 +56,7 @@ def new_home(request, audit_period):
     for pdu in pdus:
         if not pdu.active:
             if (
-                request.user.is_rcpch_audit_team_member
+                request.user.has_perm("npda.can_access_all_pdus")
                 or Submission.objects.filter(
                     paediatric_diabetes_unit=pdu,
                     audit_period__slug=audit_period,
@@ -74,7 +74,7 @@ def new_home(request, audit_period):
     audit_period_obj = AuditPeriod.objects.get_audit_period_for_request(request)
     audit_periods = list(AuditPeriod.objects.all())
 
-    if not request.user.is_rcpch_audit_team_member and not request.user.is_superuser:
+    if not request.user.has_perm("npda.can_view_hidden_audit_periods"):
         audit_periods = [p for p in audit_periods if p.is_visible]
 
     for p in audit_periods:
@@ -191,7 +191,7 @@ def download_template(request, audit_period, pdu):
 
 @login_and_otp_required()
 def feature_flags(request):
-    if not (request.user.is_superuser or request.user.is_rcpch_audit_team_member):
+    if not request.user.has_perm("npda.can_preview_features"):
         raise PermissionDenied("Feature previews are restricted to audit team.")
     if request.POST:
         user_flags = [

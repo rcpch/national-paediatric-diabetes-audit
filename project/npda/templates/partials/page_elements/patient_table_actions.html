@@ -57,7 +57,7 @@
                         View submission history
                     </a>
                 </li>
-                {% if user.is_superuser or request.user.is_rcpch_audit_team_member %}
+                {% if perms.npda.can_override_data_upload_rules %}
                     <!-- Pop up which explains implications of switching from questionnaire to CSV for submissions -->
                     {% include 'partials/page_elements/switch_to_csv_popup.html' %}
                     <div class="dropdown dropdown-bottom dropdown-end">
@@ -136,7 +136,7 @@
                                 View upload history
                             </a>
                         </li>
-                        {% if user.is_superuser or request.user.is_rcpch_audit_team_member %}
+                        {% if perms.npda.can_override_data_upload_rules %}
                             <li>
                                 <a href="{% data_url 'pdu-patient-add' %}" class="text-rcpch_red">
                                     <i class="fa-solid fa-person-circle-plus"></i>

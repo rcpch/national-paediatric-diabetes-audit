@@ -15,10 +15,8 @@ def get_audit_periods_user_can_see(user):
     audit_periods = []
 
     for audit_period in AuditPeriod.objects.order_by("start_date").all():
-        if (
-            audit_period.is_visible
-            or user.is_rcpch_audit_team_member
-            or user.is_superuser
+        if audit_period.is_visible or user.has_perm(
+            "npda.can_view_hidden_audit_periods"
         ):
             audit_periods.append(audit_period)
 
@@ -91,7 +89,7 @@ def banner(request):
             if banner.user_role_to_target and request.user:
                 if (
                     request.user.role == banner.user_role_to_target
-                    or request.user.is_rcpch_audit_team_member
+                    or request.user.has_perm("npda.view_banner")
                 ):
                     return {"banner": banner}
             elif not banner.user_role_to_target:
