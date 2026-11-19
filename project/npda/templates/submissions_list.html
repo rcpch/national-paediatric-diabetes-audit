@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block content %}
-  {% if request.user.is_rcpch_audit_team_member %}
+  {% if perms.npda.can_access_all_pdus %}
     <style>
       .sbm-nav-btn.is-active {
         background-color: #e00087;

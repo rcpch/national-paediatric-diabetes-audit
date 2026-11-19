@@ -91,10 +91,7 @@ class PDUPermissionMixin(AccessMixin):
 
         model = self.get_model().__name__
 
-        if (
-            not request.user.is_superuser
-            and not request.user.is_rcpch_audit_team_member
-        ):
+        if not request.user.has_perm("npda.can_access_all_pdus"):
             match model:
                 # PDU level permission checked in the request helpers above. This is to prevent access to models by guessing their pk.
                 case "Patient" if "pk" in self.kwargs:
@@ -129,10 +126,7 @@ class CheckCurrentAuditYearMixin(AccessMixin):
             raise PermissionDenied()
 
         if request.method != "GET" and not audit_period.is_open:
-            if (
-                not request.user.is_superuser
-                and not request.user.is_rcpch_audit_team_member
-            ):
+            if not request.user.has_perm("npda.can_edit_closed_audit_periods"):
                 logger.warning(
                     f"User {request.user} tried to create/edit or delete data in a closed audit year."
                 )
@@ -152,8 +146,8 @@ class QuestionnaireContextMixin(AccessMixin):
         is_csv_upload = submission and submission.csv_file_name is not None
         is_questionnaire = not is_csv_upload if submission else True
 
-        can_override_data_upload_rules = self.request.user.is_superuser or getattr(
-            self.request.user, "is_rcpch_audit_team_member", False
+        can_override_data_upload_rules = self.request.user.has_perm(
+            "npda.can_override_data_upload_rules"
         )
         data_upload_rules_overridden = (
             can_override_data_upload_rules and self.request.GET.get("unlock", False)
@@ -172,7 +166,7 @@ class QuestionnaireContextMixin(AccessMixin):
 class CheckCanCompleteQuestionnaireMixin(QuestionnaireContextMixin, AccessMixin):
     def dispatch(self, request, *args, **kwargs):
         # Overriding data upload rules just applies in the UI
-        if request.user.is_superuser or request.user.is_rcpch_audit_team_member:
+        if request.user.has_perm("npda.can_override_data_upload_rules"):
             return super().dispatch(request, *args, **kwargs)
 
         if request.method != "GET":

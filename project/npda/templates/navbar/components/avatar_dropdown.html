@@ -38,7 +38,7 @@
       <li>
         <a href="{% url 'npda_users' %}"><i class="fa-solid fa-users"></i>Manage Users</a>
       </li>
-      {% if user.is_superuser or user.is_rcpch_audit_team_member %}
+      {% if perms.npda.can_preview_features %}
         <li>
           <a href="{% url 'feature-flags' %}"><i class="fa-solid fa-wand-magic-sparkles"></i>Feature Previews</a>
         </li>

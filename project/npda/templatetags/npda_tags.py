@@ -391,9 +391,9 @@ def screen_ineligible(value):
 def employer_match(user_to_match, user):
     """
     Checks if the user_to_match has an employer in common with the user (the logged in user)
-    RCPCH staff and audit team members can view all users
+    Users who can manage users in any PDU can view all users
     """
-    if user.is_superuser or user.is_rcpch_staff or user.is_rcpch_audit_team_member:
+    if user.has_perm("npda.can_manage_users_in_any_pdu"):
         return True
     for employer in user_to_match.organisation_employers.all():
         if employer in user.organisation_employers.all():
@@ -404,41 +404,22 @@ def employer_match(user_to_match, user):
 @register.filter
 def exclude_admin_user_field(field, user):
     """
-    Excludes the is_admin_user field from the npda user form unless the user is an RCPCH staff member/superuser
+    Hides the RCPCH flag toggles on the npda user form unless the user may give
+    out the RCPCH Audit Team role. Returns True if the field should be shown.
     """
-    if user.is_superuser:
-        return True
-    elif user.is_rcpch_staff or user.is_rcpch_audit_team_member:
-        if user.is_rcpch_staff:
-            if field.id_for_label in [
-                "id_is_rcpch_staff",
-            ]:
-                return True
-        if user.is_rcpch_audit_team_member:
-            if field.id_for_label in [
-                "id_is_staffid_is_rcpch_staff",
-                "id_is_rcpch_audit_team_member",
-            ]:
-                return True
-        return False
-    if field.id_for_label in [
-        "id_is_staff",
-        "id_is_superuser",
-        "id_is_rcpch_staff",
-        "id_is_rcpch_audit_team_member",
-    ]:
-        return False
+    if field.id_for_label in ["id_is_rcpch_staff", "id_is_rcpch_audit_team_member"]:
+        return user.has_perm("npda.can_assign_rcpch_audit_team_role")
+    if field.id_for_label in ["id_is_staff", "id_is_superuser"]:
+        return user.is_superuser
     return True
 
 
 @register.filter
 def include_admin_users(user):
     """
-    Returns true if the user is an RCPCH staff member or superuser
+    Returns true if the user can manage users in any PDU
     """
-    if user.is_superuser or user.is_rcpch_staff or user.is_rcpch_audit_team_member:
-        return True
-    return False
+    return user.has_perm("npda.can_manage_users_in_any_pdu")
 
 
 @register.filter

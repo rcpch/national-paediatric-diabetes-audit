@@ -118,11 +118,8 @@ class NPDAUpdatePasswordForm(SetPasswordForm):
         self.user = user
 
         if user:
-            self.is_admin = (
-                user.is_rcpch_audit_team_member
-                or user.is_superuser
-                or user.is_rcpch_staff
-            )
+            # users with national access need the longer password
+            self.is_admin = user.has_perm("npda.can_access_all_pdus")
 
         super(SetPasswordForm, self).__init__(*args, **kwargs)
 

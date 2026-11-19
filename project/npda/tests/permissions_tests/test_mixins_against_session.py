@@ -4,11 +4,13 @@ from unittest.mock import Mock, patch
 
 # 3rd party imports
 import pytest
+from django.contrib.auth.models import Group
 from django.contrib.gis.geos import Point
 
 # Django imports
 from django.urls import reverse
 
+from project.constants import NPDA_AUDIT_TEAM_FULL_ACCESS
 from project.npda.forms.external_patient_validators import (
     PatientExternalValidationResult,
 )
@@ -171,8 +173,7 @@ class TestQuestionnaireView:
         self.audit_period.save()
 
         # Give the user the RCPCH audit team group
-        self.ah_user.is_rcpch_audit_team_member = True
-        self.ah_user.save()
+        self.ah_user.groups.add(Group.objects.get(name=NPDA_AUDIT_TEAM_FULL_ACCESS))
 
         # url
         url = reverse(
@@ -232,8 +233,7 @@ class TestQuestionnaireView:
         )
 
         # Give the user the RCPCH audit team group
-        self.ah_user.is_rcpch_audit_team_member = True
-        self.ah_user.save()
+        self.ah_user.groups.add(Group.objects.get(name=NPDA_AUDIT_TEAM_FULL_ACCESS))
 
         # Create a patient
         form = PatientForm(VALID_FIELDS)
