@@ -117,14 +117,9 @@
                   <i class="fa-solid fa-universal-access fa-xl text-rcpch_pink ml-2 mr-2"></i>
                 </div>
               {% endif %}
-              {% if npda_user.is_rcpch_audit_team_member %}
-                <div class="tooltip tooltip-top" data-tip="RCPCH Audit Team Member">
+              {% if npda_user.has_rcpch_audit_team_role %}
+                <div class="tooltip tooltip-top" data-tip="RCPCH Audit Team">
                   <i class="fa-solid fa-calculator fa-xl text-rcpch_pink ml-2 mr-2"></i>
-                </div>
-              {% endif %}
-              {% if npda_user.is_rcpch_staff %}
-                <div class="tooltip tooltip-top" data-tip="RCPCH Staff Member">
-                  <i class="fa-solid fa-id-badge fa-xl text-rcpch_pink ml-2 mr-2"></i>
                 </div>
               {% endif %}
             </span>

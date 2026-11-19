@@ -57,8 +57,6 @@ def create_submission(
         # Assign flags based on user role
         is_active=test_user_audit_centre_reader_data.is_active,
         is_staff=test_user_audit_centre_reader_data.is_staff,
-        is_rcpch_audit_team_member=test_user_audit_centre_reader_data.is_rcpch_audit_team_member,
-        is_rcpch_staff=test_user_audit_centre_reader_data.is_rcpch_staff,
         groups=[test_user_audit_centre_reader_data.group_name],
         # Assign to PDU via organisation employer by passing in list of pz_codes
         organisation_employers=[pz_code],

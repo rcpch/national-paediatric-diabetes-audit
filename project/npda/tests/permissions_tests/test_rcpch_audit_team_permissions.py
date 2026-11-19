@@ -1,8 +1,8 @@
 """
-Phase 1 of retiring is_rcpch_audit_team_member and is_rcpch_staff.
-See documentation/docs/developer/rcpch-flags-retirement-plan.md
+RCPCH audit team permissions and the group that holds them.
+See documentation/docs/developer/users.md
 
-- Only the RCPCH audit team group holds the permissions that replace the flags.
+- Only the RCPCH audit team group holds the national access permissions.
 - Changing a role, in the app or the Django admin, moves the user to the role's group.
 - Joining the audit team group logs and emails the admins.
 - The group seeder, run on every deploy by s/start-prod, adds new permissions
@@ -74,7 +74,7 @@ def _group_names(user):
 
 
 @pytest.mark.django_db
-def test_audit_team_group_has_flag_replacement_permissions(seed_groups_fixture):
+def test_audit_team_group_has_national_access_permissions(seed_groups_fixture):
     assert RCPCH_AUDIT_TEAM_ONLY_PERMISSIONS <= _codenames(
         _group(NPDA_AUDIT_TEAM_FULL_ACCESS)
     )
@@ -90,9 +90,7 @@ def test_audit_team_group_has_flag_replacement_permissions(seed_groups_fixture):
     ],
 )
 @pytest.mark.django_db
-def test_other_groups_lack_flag_replacement_permissions(
-    seed_groups_fixture, group_name
-):
+def test_other_groups_lack_national_access_permissions(seed_groups_fixture, group_name):
     assert not RCPCH_AUDIT_TEAM_ONLY_PERMISSIONS & _codenames(_group(group_name))
 
 
@@ -197,7 +195,7 @@ def _admin_save(user, changed_data, change=True):
 
 
 @pytest.mark.django_db
-def test_admin_promotion_syncs_flags_and_group(seed_groups_fixture):
+def test_admin_promotion_syncs_group(seed_groups_fixture):
     user = NPDAUserFactory(
         role=AUDIT_CENTRE_COORDINATOR,
         groups=[_group(TRUST_AUDIT_TEAM_EDIT_ACCESS)],
@@ -206,42 +204,34 @@ def test_admin_promotion_syncs_flags_and_group(seed_groups_fixture):
     user.role = RCPCH_AUDIT_TEAM
     _admin_save(user, ["role"])
 
-    assert user.is_rcpch_audit_team_member is True
-    assert user.is_rcpch_staff is True
     assert _group_names(user) == {NPDA_AUDIT_TEAM_FULL_ACCESS}
 
 
 @pytest.mark.django_db
-def test_admin_demotion_clears_flags_and_moves_group(seed_groups_fixture):
+def test_admin_demotion_moves_group(seed_groups_fixture):
     user = NPDAUserFactory(
         role=RCPCH_AUDIT_TEAM,
-        is_rcpch_audit_team_member=True,
-        is_rcpch_staff=True,
         groups=[_group(NPDA_AUDIT_TEAM_FULL_ACCESS)],
     )
 
     user.role = AUDIT_CENTRE_COORDINATOR
     _admin_save(user, ["role"])
 
-    assert user.is_rcpch_audit_team_member is False
-    assert user.is_rcpch_staff is False
     assert _group_names(user) == {TRUST_AUDIT_TEAM_COORDINATOR_ACCESS}
 
 
 @pytest.mark.django_db
-def test_admin_flag_change_without_role_change_is_kept(seed_groups_fixture):
+def test_admin_edit_without_role_change_leaves_groups(seed_groups_fixture):
     user = NPDAUserFactory(
         role=AUDIT_CENTRE_COORDINATOR,
-        is_rcpch_audit_team_member=True,
-        groups=[_group(TRUST_AUDIT_TEAM_COORDINATOR_ACCESS)],
+        groups=[_group(TRUST_AUDIT_TEAM_EDIT_ACCESS)],
     )
 
-    user.is_rcpch_audit_team_member = False
-    _admin_save(user, ["is_rcpch_audit_team_member"])
+    user.first_name = "Renamed"
+    _admin_save(user, ["first_name"])
 
-    assert user.role == AUDIT_CENTRE_COORDINATOR
-    assert user.is_rcpch_audit_team_member is False
-    assert _group_names(user) == {TRUST_AUDIT_TEAM_COORDINATOR_ACCESS}
+    assert user.first_name == "Renamed"
+    assert _group_names(user) == {TRUST_AUDIT_TEAM_EDIT_ACCESS}
 
 
 @pytest.mark.django_db

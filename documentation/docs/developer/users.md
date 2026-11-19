@@ -61,6 +61,29 @@ Note that users cannot be deleted once created, only inactivated. This prevents 
 | NPDAUser | ✔️   |    ✔️   |    ✔️   |    ✔️   | CAN_SUBMIT_CSV, CAN_DOWNLOAD_CSV |
 | Submission | ✔️   |    ✔️   |    ✔️   |    ✔️   | ------ |
 
+#### National access (RCPCH Audit Team)
+
+National access comes only from these permissions, which only the `npda_audit_team_full_access` group holds. Users are in that group because their role is RCPCH Audit Team. Check them with `user.has_perm("npda.<codename>")`, or `perms.npda.<codename>` in templates. Never check group membership. `has_perm` is True for any active superuser and False for any inactive user.
+
+| Permission | Model | Allows |
+| --- | --- | --- |
+| `can_access_all_pdus` | PaediatricDiabetesUnit | View any PDU, and its users, patients and submissions. Also requires the 16-character password. |
+| `can_manage_inactive_pdus` | PaediatricDiabetesUnit | Add users and employers to inactive PDUs |
+| `can_view_hidden_audit_periods` | AuditPeriod | View audit periods that aren't visible yet |
+| `can_edit_closed_audit_periods` | AuditPeriod | Create, edit and delete data, and upload CSVs, in a closed audit period |
+| `can_override_data_upload_rules` | Submission | Switch between CSV and questionnaire submissions, and use the questionnaire on a CSV submission |
+| `can_manage_users_in_any_pdu` | NPDAUser | Create, edit, activate and deactivate users, and change their employers, in any PDU |
+| `can_assign_rcpch_audit_team_role` | NPDAUser | Give a user the RCPCH Audit Team role |
+| `can_reset_user_two_factor` | NPDAUser | Reset another user's two-factor authentication |
+| `can_preview_features` | NPDAUser | Turn on feature previews |
+| `view_banner` (built-in) | Banner | See banners targeted at any role |
+
+An audit team member still can't change a superuser's email or reset their two-factor authentication.
+
+To check *what a user is* rather than *what they may do* (for example to badge them, or when the check is about a user being edited, who may be inactive), use `user.has_rcpch_audit_team_role`.
+
+The permissions are attached to the group by `groups_seeder`, which `s/start-prod` runs on every deploy. It creates any missing group and adds any missing permission, but never removes one. Changing a user's role in the app or the Django admin moves them to the role's group, and joining `npda_audit_team_full_access` logs the change and emails `CHANGE_NOTIFICATION_EMAILS`.
+
 
 #### NPDAUser model
 
@@ -70,8 +93,6 @@ This has the basic django user functions but has the following extra custom fiel
 - `is_active`: boolean - not that if this is `False`, the user cannot login, and is automatically logged out if actively in a session: this is default django behaviour.
 - `is_staff`: boolean - this is a django field which defines access to the Django Admin
 - `is_superuser`: boolean - this is a django field which give access to all models, including the admin
-- `is_rcpch_audit_team_member`: boolean - a custom field that defines the user is an RCPCH audit team member
-- `is_rcpch_staff`: boolean - a custom field that defines the user is an RCPCH staff member. This is as opposed to a clinician who may be a member of the audit team, but not an RCPCH employee
 - `is_patient_or_carer`: boolean - a custom field that defines the user is a patient or carer
 - `role` - user type as above
 - `organisation_employer` - this is a relational field with an Organisation. Only applies to clinicians and therefore is None for RCPCH employees.
@@ -136,11 +157,9 @@ In addition to logging, there are also signals set up in `signals.py` which list
 
 | Logging Triggers | Email Triggers |
 | --- | --- |
-|  'role' |  'is_superuser' |
-| 'is_active' |  'is_rcpch_audit_team_member' |
-| 'is_rcpch_audit_team_member', |  'is_rcpch_staff' |
-| 'is_rcpch_staff' |  'is_superuser' |
-| 'is_staff' |  'is_staff' |
-| 'email' |  'email |
-| 'first_name' | - |
-| 'surname' |  - |
+| 'role' | 'role' |
+| 'is_active' | 'is_active' |
+| 'is_staff' | 'is_staff' |
+| 'email' | 'email' |
+| 'first_name' | 'is_superuser' |
+| 'surname' | joining `npda_audit_team_full_access` |

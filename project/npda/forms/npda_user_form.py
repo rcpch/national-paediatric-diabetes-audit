@@ -40,8 +40,6 @@ class NPDAUserForm(forms.ModelForm):
             "first_name",
             "surname",
             "email",
-            "is_rcpch_audit_team_member",
-            "is_rcpch_staff",
             "role",
             "add_employer",
         ]
@@ -50,16 +48,6 @@ class NPDAUserForm(forms.ModelForm):
             "first_name": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "surname": forms.TextInput(attrs={"class": TEXT_INPUT}),
             "email": forms.EmailInput(attrs={"class": TEXT_INPUT}),
-            "is_rcpch_audit_team_member": forms.CheckboxInput(
-                attrs={
-                    "class": "toggle border-rcpch_light_blue bg-rcpch_light_blue checked:bg-rcpch_pink_light_tint2 checked:border-rcpch_pink hover:bg-rcpch_pink"
-                }
-            ),
-            "is_rcpch_staff": forms.CheckboxInput(
-                attrs={
-                    "class": "toggle border-rcpch_light_blue bg-rcpch_light_blue checked:bg-rcpch_pink_light_tint2 checked:border-rcpch_pink hover:bg-rcpch_pink"
-                }
-            ),
             "role": forms.Select(attrs={"class": SELECT}),
             "add_employer": forms.Select(
                 attrs={

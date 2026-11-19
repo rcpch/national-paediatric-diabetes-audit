@@ -568,7 +568,7 @@ def test_audit_team_can_add_employers_outside_of_their_pdu(
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "user_flag",
-    ["is_superuser", "is_staff", "is_rcpch_audit_team_member", "is_rcpch_staff"],
+    ["is_superuser", "is_staff"],
 )
 def test_coordinators_cannot_set_user_flags(
     seed_groups_fixture,
@@ -601,44 +601,6 @@ def test_coordinators_cannot_set_user_flags(
 
     coordinator.refresh_from_db()
     assert getattr(coordinator, user_flag) is False
-
-
-@pytest.mark.django_db
-@pytest.mark.parametrize(
-    "user_flag",
-    ["is_rcpch_audit_team_member", "is_rcpch_staff"],
-)
-def test_coordinators_cannot_create_users_with_superuser_flags(
-    seed_groups_fixture,
-    seed_users_fixture,
-    seed_audit_periods_fixture,
-    client,
-    user_flag,
-):
-    user_count_before = NPDAUser.objects.count()
-
-    coordinator = NPDAUser.objects.filter(
-        organisation_employers__pz_code=ALDER_HEY_PZ_CODE, role=AUDIT_CENTRE_COORDINATOR
-    ).first()
-
-    client = login_and_verify_user(client, coordinator)
-
-    url = reverse("npdauser-create")
-
-    data = {
-        "first_name": "Bob",
-        "surname": "Bobertson",
-        "email": "bob@bobertson.com",
-        "add_employer": ALDER_HEY_PZ_CODE,
-        "role": AUDIT_CENTRE_COORDINATOR,
-    }
-
-    data[user_flag] = "on"
-
-    client.post(url, data)
-
-    user_count_after = NPDAUser.objects.count()
-    assert user_count_after == user_count_before
 
 
 @pytest.mark.django_db
@@ -1921,8 +1883,6 @@ def test_coordinator_cannot_change_email_for_user_with_multiple_pdus(
         role=AUDIT_CENTRE_COORDINATOR,
         is_active=True,
         is_staff=False,
-        is_rcpch_audit_team_member=False,
-        is_rcpch_staff=False,
         groups=[test_user_audit_centre_coordinator_data.group_name],
         organisation_employers=["PZ999"],
     )
@@ -1934,8 +1894,6 @@ def test_coordinator_cannot_change_email_for_user_with_multiple_pdus(
         role=AUDIT_CENTRE_READER,
         is_active=True,
         is_staff=False,
-        is_rcpch_audit_team_member=False,
-        is_rcpch_staff=False,
         groups=[test_user_audit_centre_reader_data.group_name],
         organisation_employers=["PZ999", "PZ001"],
     )
@@ -1977,8 +1935,6 @@ def test_coordinator_cannot_change_role_for_user_with_multiple_pdus(
         role=AUDIT_CENTRE_COORDINATOR,
         is_active=True,
         is_staff=False,
-        is_rcpch_audit_team_member=False,
-        is_rcpch_staff=False,
         groups=[test_user_audit_centre_coordinator_data.group_name],
         organisation_employers=["PZ999"],
     )
@@ -1989,8 +1945,6 @@ def test_coordinator_cannot_change_role_for_user_with_multiple_pdus(
         role=AUDIT_CENTRE_READER,
         is_active=True,
         is_staff=False,
-        is_rcpch_audit_team_member=False,
-        is_rcpch_staff=False,
         groups=[test_user_audit_centre_reader_data.group_name],
         organisation_employers=["PZ999", "PZ001"],
     )
@@ -2034,8 +1988,6 @@ def test_audit_team_member_cannot_change_email_for_superuser(
         role=RCPCH_AUDIT_TEAM,
         is_active=True,
         is_staff=False,
-        is_rcpch_audit_team_member=True,
-        is_rcpch_staff=True,
         groups=[test_user_rcpch_audit_team_data.group_name],
         organisation_employers=["PZ999"],
     )
@@ -2048,8 +2000,6 @@ def test_audit_team_member_cannot_change_email_for_superuser(
         is_active=True,
         is_superuser=True,
         is_staff=True,
-        is_rcpch_audit_team_member=True,
-        is_rcpch_staff=True,
         groups=[test_user_rcpch_audit_team_data.group_name],
         organisation_employers=["PZ999"],
     )
@@ -2093,8 +2043,6 @@ def test_audit_team_member_cannot_reset_two_factor_auth_for_superuser(
         role=RCPCH_AUDIT_TEAM,
         is_active=True,
         is_staff=False,
-        is_rcpch_audit_team_member=True,
-        is_rcpch_staff=True,
         groups=[test_user_rcpch_audit_team_data.group_name],
         organisation_employers=["PZ999"],
     )
@@ -2107,8 +2055,6 @@ def test_audit_team_member_cannot_reset_two_factor_auth_for_superuser(
         is_active=True,
         is_superuser=True,
         is_staff=True,
-        is_rcpch_audit_team_member=True,
-        is_rcpch_staff=True,
         groups=[test_user_rcpch_audit_team_data.group_name],
         organisation_employers=["PZ999"],
     )
@@ -2168,8 +2114,6 @@ def test_coordinator_cannot_change_unrestricted_fields_for_user_with_multiple_pd
         role=AUDIT_CENTRE_COORDINATOR,
         is_active=True,
         is_staff=False,
-        is_rcpch_audit_team_member=False,
-        is_rcpch_staff=False,
         groups=[test_user_audit_centre_coordinator_data.group_name],
         organisation_employers=["PZ999"],
     )
@@ -2179,8 +2123,6 @@ def test_coordinator_cannot_change_unrestricted_fields_for_user_with_multiple_pd
         role=AUDIT_CENTRE_READER,
         is_active=True,
         is_staff=False,
-        is_rcpch_audit_team_member=False,
-        is_rcpch_staff=False,
         groups=[test_user_audit_centre_reader_data.group_name],
         organisation_employers=["PZ999", "PZ001"],
     )
@@ -2239,8 +2181,6 @@ def test_coordinator_can_change_unrestricted_fields_when_sharing_exactly_same_pd
         role=AUDIT_CENTRE_COORDINATOR,
         is_active=True,
         is_staff=False,
-        is_rcpch_audit_team_member=False,
-        is_rcpch_staff=False,
         groups=[test_user_audit_centre_coordinator_data.group_name],
         organisation_employers=["PZ999", "PZ001"],
     )
@@ -2250,8 +2190,6 @@ def test_coordinator_can_change_unrestricted_fields_when_sharing_exactly_same_pd
         role=AUDIT_CENTRE_READER,
         is_active=True,
         is_staff=False,
-        is_rcpch_audit_team_member=False,
-        is_rcpch_staff=False,
         groups=[test_user_audit_centre_reader_data.group_name],
         organisation_employers=["PZ999", "PZ001"],
     )

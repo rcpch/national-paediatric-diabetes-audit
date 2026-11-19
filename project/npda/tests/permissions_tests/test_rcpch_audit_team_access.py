@@ -1,10 +1,6 @@
 """
-Phase 2 of retiring is_rcpch_audit_team_member and is_rcpch_staff.
-See documentation/docs/developer/rcpch-flags-retirement-plan.md
-
-National access now comes from the permissions on the RCPCH audit team group,
-not from the flags: a user in the group gets it without the flags, and a flag
-on its own no longer grants anything.
+National access comes from the permissions on the RCPCH audit team group.
+See documentation/docs/developer/users.md
 """
 
 from datetime import date
@@ -31,21 +27,17 @@ from project.npda.tests.utils import login_and_verify_user
 OTHER_PZ_CODE = "PZ130"
 
 
-def _audit_team_user_without_flags():
+def _audit_team_user():
     return NPDAUserFactory(
         role=RCPCH_AUDIT_TEAM,
-        is_rcpch_audit_team_member=False,
-        is_rcpch_staff=False,
         groups=[Group.objects.get(name=NPDA_AUDIT_TEAM_FULL_ACCESS)],
         organisation_employers=[ALDER_HEY_PZ_CODE],
     )
 
 
-def _coordinator_with_flags():
+def _coordinator():
     return NPDAUserFactory(
         role=AUDIT_CENTRE_COORDINATOR,
-        is_rcpch_audit_team_member=True,
-        is_rcpch_staff=True,
         groups=[Group.objects.get(name=TRUST_AUDIT_TEAM_COORDINATOR_ACCESS)],
         organisation_employers=[ALDER_HEY_PZ_CODE],
     )
@@ -60,29 +52,29 @@ def _other_pdu_patients_url(audit_period):
 
 
 @pytest.mark.django_db
-def test_audit_team_group_without_flags_can_view_other_pdu(
+def test_audit_team_can_view_other_pdu(
     seed_groups_fixture, seed_audit_periods_fixture, client
 ):
     audit_period = AuditPeriod.objects.get_default_audit_period()
     url = _other_pdu_patients_url(audit_period)
-    client = login_and_verify_user(client, _audit_team_user_without_flags())
+    client = login_and_verify_user(client, _audit_team_user())
 
     assert client.get(url).status_code == HTTPStatus.OK
 
 
 @pytest.mark.django_db
-def test_flags_without_audit_team_group_cannot_view_other_pdu(
+def test_coordinator_cannot_view_other_pdu(
     seed_groups_fixture, seed_audit_periods_fixture, client
 ):
     audit_period = AuditPeriod.objects.get_default_audit_period()
     url = _other_pdu_patients_url(audit_period)
-    client = login_and_verify_user(client, _coordinator_with_flags())
+    client = login_and_verify_user(client, _coordinator())
 
     assert client.get(url).status_code == HTTPStatus.FORBIDDEN
 
 
 @pytest.mark.django_db
-def test_hidden_audit_period_needs_permission_not_flag(
+def test_hidden_audit_period_needs_permission(
     seed_groups_fixture, seed_audit_periods_fixture, client
 ):
     hidden = AuditPeriod.objects.create(
@@ -97,23 +89,23 @@ def test_hidden_audit_period_needs_permission_not_flag(
         kwargs={"audit_period": hidden.slug, "pz_code": ALDER_HEY_PZ_CODE},
     )
 
-    flagged_client = login_and_verify_user(client, _coordinator_with_flags())
-    assert flagged_client.get(url).status_code == HTTPStatus.FORBIDDEN
+    coordinator_client = login_and_verify_user(client, _coordinator())
+    assert coordinator_client.get(url).status_code == HTTPStatus.FORBIDDEN
 
-    audit_team_client = login_and_verify_user(client, _audit_team_user_without_flags())
+    audit_team_client = login_and_verify_user(client, _audit_team_user())
     assert audit_team_client.get(url).status_code == HTTPStatus.OK
 
 
 @pytest.mark.django_db
-def test_feature_previews_need_permission_not_flag(
+def test_feature_previews_need_permission(
     seed_groups_fixture, seed_audit_periods_fixture, client
 ):
     url = reverse("feature-flags")
 
-    flagged_client = login_and_verify_user(client, _coordinator_with_flags())
-    assert flagged_client.get(url).status_code == HTTPStatus.FORBIDDEN
+    coordinator_client = login_and_verify_user(client, _coordinator())
+    assert coordinator_client.get(url).status_code == HTTPStatus.FORBIDDEN
 
-    audit_team_client = login_and_verify_user(client, _audit_team_user_without_flags())
+    audit_team_client = login_and_verify_user(client, _audit_team_user())
     assert audit_team_client.get(url).status_code == HTTPStatus.OK
 
 
@@ -131,7 +123,7 @@ def test_coordinator_cannot_change_email_of_inactive_audit_team_member(
         groups=[Group.objects.get(name=TRUST_AUDIT_TEAM_COORDINATOR_ACCESS)],
         organisation_employers=[ALDER_HEY_PZ_CODE],
     )
-    target = _audit_team_user_without_flags()
+    target = _audit_team_user()
     target.is_active = False
     target.save()
     email_before = target.email
