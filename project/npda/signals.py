@@ -44,6 +44,7 @@ This file contains signals that are triggered when:
 # (is_active emails the admins when changed by an administrator: automatic
 # deactivation for inactivity suppresses it, see _send_change_notifications)
 EMAIL_TRIGGER_FIELDS = [
+    "role",
     "is_superuser",
     "is_staff",
     "email",

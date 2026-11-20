@@ -294,6 +294,28 @@ def test_resyncing_existing_member_does_not_notify(seed_groups_fixture):
 
 
 @pytest.mark.django_db
+def test_leaving_audit_team_role_notifies_admins(seed_groups_fixture):
+    """
+    Joining the audit team group has its own alert. Leaving it is reported by
+    the role change, which must email the admins.
+    """
+    user = NPDAUserFactory(
+        role=RCPCH_AUDIT_TEAM, groups=[_group(NPDA_AUDIT_TEAM_FULL_ACCESS)]
+    )
+
+    with patch("project.npda.signals._send_admin_notification") as notify:
+        user.role = AUDIT_CENTRE_COORDINATOR
+        user.save()
+
+    notify.assert_called_once()
+    assert notify.call_args.args[0] == user
+    assert notify.call_args.args[1]["role"] == {
+        "old": RCPCH_AUDIT_TEAM,
+        "new": AUDIT_CENTRE_COORDINATOR,
+    }
+
+
+@pytest.mark.django_db
 def test_joining_another_group_does_not_notify(seed_groups_fixture):
     user = NPDAUserFactory(role=AUDIT_CENTRE_EDITOR)
 
