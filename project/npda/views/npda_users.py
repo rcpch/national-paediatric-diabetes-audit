@@ -179,9 +179,6 @@ class NPDAUserCreateView(
         context["show_rcpch_team"] = self.request.user.has_perm(
             "npda.can_assign_rcpch_audit_team_role"
         )
-        context["show_rcpch_staff_box"] = self.request.user.has_perm(
-            "npda.can_assign_rcpch_audit_team_role"
-        )
         context["title"] = "Add New NPDA User"
         context["button_title"] = "Add"
         context["form_method"] = "create"
@@ -219,20 +216,6 @@ class NPDAUserCreateView(
         ):
             raise PermissionDenied(
                 "You do not have permission to add a user with RCPCH Audit Team role."
-            )
-
-        if form.cleaned_data["is_rcpch_audit_team_member"] and not (
-            self.request.user.has_perm("npda.can_assign_rcpch_audit_team_role")
-        ):
-            raise PermissionDenied(
-                "You do not have permission to add a user with the is_rcpch_audit_team_member flag."
-            )
-
-        if form.cleaned_data["is_rcpch_staff"] and not (
-            self.request.user.has_perm("npda.can_assign_rcpch_audit_team_role")
-        ):
-            raise PermissionDenied(
-                "You do not have permission to add a user with the is_rcpch_staff flag."
             )
 
         new_user = form.save(commit=False)
@@ -361,9 +344,6 @@ class NPDAUserUpdateView(
         context["show_rcpch_team"] = self.request.user.has_perm(
             "npda.can_assign_rcpch_audit_team_role"
         )
-        context["show_rcpch_staff_box"] = self.request.user.has_perm(
-            "npda.can_assign_rcpch_audit_team_role"
-        )
         context["title"] = "Edit NPDA User Details"
         context["button_title"] = "Save"
         context["form_method"] = "update"
@@ -397,20 +377,6 @@ class NPDAUserUpdateView(
         ):
             raise PermissionDenied(
                 "You do not have permission to grant the RCPCH Audit Team role."
-            )
-
-        if form.cleaned_data["is_rcpch_audit_team_member"] and not (
-            self.request.user.has_perm("npda.can_assign_rcpch_audit_team_role")
-        ):
-            raise PermissionDenied(
-                "You do not have permission to set the is_rcpch_audit_team_member flag."
-            )
-
-        if form.cleaned_data["is_rcpch_staff"] and not (
-            self.request.user.has_perm("npda.can_assign_rcpch_audit_team_role")
-        ):
-            raise PermissionDenied(
-                "You do not have permission to set the is_rcpch_staff flag."
             )
 
         changed_restricted_fields = [

@@ -23,7 +23,6 @@ class Command(BaseCommand):
         surname,
         password,
         role,
-        is_rcpch_audit_team_member=False,
     ):
         user_model = get_user_model()
 
@@ -37,7 +36,6 @@ class Command(BaseCommand):
                 is_active=True,
                 pz_code=pz_code,
                 is_primary_employer=True,
-                is_rcpch_audit_team_member=is_rcpch_audit_team_member,
             )
 
             self.stdout.write(self.style.SUCCESS(f"Successfully created {email}."))
@@ -120,7 +118,6 @@ class Command(BaseCommand):
             surname="Lovelace",
             password=password,
             role=RCPCH_AUDIT_TEAM,
-            is_rcpch_audit_team_member=True,
         )
 
         # Test inactive split unit (https://github.com/rcpch/national-paediatric-diabetes-audit/issues/924)

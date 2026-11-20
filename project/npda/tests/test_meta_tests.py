@@ -54,8 +54,6 @@ def test__multiple_PaediatricsDiabetesUnitFactory_instances_not_created():
             # Assign flags based on user role
             is_active=user_data.is_active,
             is_staff=user_data.is_staff,
-            is_rcpch_audit_team_member=user_data.is_rcpch_audit_team_member,
-            is_rcpch_staff=user_data.is_rcpch_staff,
             groups=[user_data.group_name],
         )
 
@@ -69,8 +67,6 @@ def test__multiple_PaediatricsDiabetesUnitFactory_instances_not_created():
             # Assign flags based on user role
             is_active=user_data.is_active,
             is_staff=user_data.is_staff,
-            is_rcpch_audit_team_member=user_data.is_rcpch_audit_team_member,
-            is_rcpch_staff=user_data.is_rcpch_staff,
             groups=[user_data.group_name],
             # Assign to PDU via organisation employer by passing in list of pz_codes
             organisation_employers=[GOSH_PZ_CODE],

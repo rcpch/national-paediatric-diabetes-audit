@@ -325,7 +325,7 @@ class TestQuestionnaireView:
         """
         They can't edit the patient but can view them (the UI displays read only)
         """
-        assert not self.ah_user.is_rcpch_audit_team_member
+        assert not self.ah_user.has_perm("npda.can_override_data_upload_rules")
 
         sub = create_submission(
             self.audit_period,
@@ -359,7 +359,7 @@ class TestQuestionnaireView:
         """
         They can't edit the visit but can view it (the UI displays read only)
         """
-        assert not self.ah_user.is_rcpch_audit_team_member
+        assert not self.ah_user.has_perm("npda.can_override_data_upload_rules")
 
         sub = create_submission(
             self.audit_period,

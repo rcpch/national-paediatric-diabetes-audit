@@ -44,9 +44,7 @@ This file contains signals that are triggered when:
 # (is_active emails the admins when changed by an administrator: automatic
 # deactivation for inactivity suppresses it, see _send_change_notifications)
 EMAIL_TRIGGER_FIELDS = [
-    "is_superuser",
-    "is_rcpch_audit_team_member",
-    "is_rcpch_staff",
+    "role",
     "is_superuser",
     "is_staff",
     "email",
@@ -57,8 +55,6 @@ EMAIL_TRIGGER_FIELDS = [
 LOGGED_FIELDS = [
     "role",
     "is_active",
-    "is_rcpch_audit_team_member",
-    "is_rcpch_staff",
     "is_staff",
     "email",
     "first_name",
@@ -223,8 +219,7 @@ def notify_joined_rcpch_audit_team(sender, instance, action, reverse, pk_set, **
     """
     Log and email the admins when a user joins the RCPCH audit team group.
 
-    The group grants national access, so this replaces the alert previously sent
-    when the is_rcpch_audit_team_member / is_rcpch_staff flags changed.
+    The group grants national access, so every new member is reported.
 
     On post_add, pk_set only holds rows that were not already there, so
     groups.set() re-saving an existing member doesn't trigger it. Code that
@@ -449,8 +444,7 @@ def _send_change_notifications(user, changes, current_user):
     role_permission_changes = {
         field: change
         for field, change in email_worthy_changes.items()
-        if field
-        in ["role", "is_rcpch_audit_team_member", "is_rcpch_staff", "is_active"]
+        if field in ["role", "is_active"]
     }
 
     # An automatic deactivation due to inactivity is routine housekeeping,
@@ -577,7 +571,7 @@ def _map_changes_to_visit_activity(changes):
     )
     """
 
-    ADMIN_FLAGS = ["is_active", "is_rcpch_audit_team_member", "is_rcpch_staff"]
+    ADMIN_FLAGS = ["is_active"]
     USER_RECORD_FIELDS = ["email", "first_name", "surname"]
 
     if "role" in changes:
@@ -654,8 +648,6 @@ def _send_user_deletion_notification(user_instance, current_user):
     User: {deletion_data.get("full_name", "Unknown")} ({deletion_data.get("email", "Unknown")})
     Role: {deletion_data.get("role", "Unknown")}
     Active: {deletion_data.get("is_active", "Unknown")}
-    Audit Team Member: {deletion_data.get("is_rcpch_audit_team_member", "Unknown")}
-    RCPCH Staff: {deletion_data.get("is_rcpch_staff", "Unknown")}
     Date Joined: {deletion_data.get("date_joined", "Unknown")}
     Last Login: {deletion_data.get("last_login", "Never") if deletion_data.get("last_login") else "Never"}{pdu_info}
 

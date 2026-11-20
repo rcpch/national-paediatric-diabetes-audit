@@ -39,7 +39,6 @@ class NPDAUserFactory(factory.django.DjangoModelFactory):
     is_active = True
     is_superuser = False
     email_confirmed = True
-    is_rcpch_audit_team_member = False
 
     @factory.post_generation
     def groups(self, create, extracted, **kwargs):

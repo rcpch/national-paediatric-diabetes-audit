@@ -47,8 +47,6 @@ def _seed_users_fixture(django_db_setup, django_db_blocker, test_pz_codes_fixtur
                     role=user.role,
                     is_active=True,
                     is_staff=False,
-                    is_rcpch_audit_team_member=user.is_rcpch_audit_team_member,
-                    is_rcpch_staff=user.is_rcpch_staff,
                     groups=[user.group_name],
                     organisation_employers=[pz_code],
                 )

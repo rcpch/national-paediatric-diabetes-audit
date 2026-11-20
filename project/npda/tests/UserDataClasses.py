@@ -21,8 +21,6 @@ class TestUser:
     role_str: str
     is_active: bool = False
     is_staff: bool = False
-    is_rcpch_audit_team_member: bool = False
-    is_rcpch_staff: bool = False
 
     @property
     def group_name(self):
@@ -34,8 +32,6 @@ test_user_audit_centre_reader_data = TestUser(
     is_active=True,
     is_staff=False,
     role_str="AUDIT_CENTRE_READER",
-    is_rcpch_audit_team_member=False,
-    is_rcpch_staff=False,
 )
 
 test_user_audit_centre_editor_data = TestUser(
@@ -43,8 +39,6 @@ test_user_audit_centre_editor_data = TestUser(
     role_str="AUDIT_CENTRE_EDITOR",
     is_active=True,
     is_staff=False,
-    is_rcpch_audit_team_member=False,
-    is_rcpch_staff=False,
 )
 
 test_user_audit_centre_coordinator_data = TestUser(
@@ -52,8 +46,6 @@ test_user_audit_centre_coordinator_data = TestUser(
     role_str="AUDIT_CENTRE_COORDINATOR",
     is_active=True,
     is_staff=False,
-    is_rcpch_audit_team_member=False,
-    is_rcpch_staff=False,
 )
 
 test_user_rcpch_audit_team_data = TestUser(
@@ -61,6 +53,4 @@ test_user_rcpch_audit_team_data = TestUser(
     role_str="RCPCH_AUDIT_TEAM",
     is_active=True,
     is_staff=False,
-    is_rcpch_audit_team_member=True,
-    is_rcpch_staff=True,
 )

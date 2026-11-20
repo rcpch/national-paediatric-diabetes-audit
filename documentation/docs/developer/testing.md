@@ -133,8 +133,6 @@ new_user_gosh = NPDAUserFactory(
     # Assign flags based on user role
     is_active=is_active,
     is_staff=is_staff,
-    is_rcpch_audit_team_member=is_rcpch_audit_team_member,
-    is_rcpch_staff=is_rcpch_staff,
     groups=[user.group_name],
     organisation_employers=[GOSH_PZ_CODE],
 )
@@ -146,8 +144,6 @@ new_user_alder_hey = NPDAUserFactory(
     # Assign flags based on user role
     is_active=is_active,
     is_staff=is_staff,
-    is_rcpch_audit_team_member=is_rcpch_audit_team_member,
-    is_rcpch_staff=is_rcpch_staff,
     groups=[user.group_name],
     organisation_employers=[ALDER_HEY_PZ_CODE],
 )

@@ -79,9 +79,7 @@ python manage.py createsuperuser
 
 Then follow the command line prompts to create the first user. Createsuperuser is a Django base feature but there are some custom fields which are mandatory. These include:
 
-- `role`: The options are: `1 - Coordinator, 2 - Editor, 3 - Reader, 4 - RCPCH Audit Team`. If the integer selected in 1-3 (ie a role within the NPDA site) KCH is automatically allocated. If it is an RCPCH user, `is_rcpch_staff` is automatically set to true, as is `is_rcpch_audit_team_member`
-
-- `is_rcpch_audit_team_member`: `True|False`.
+- `role`: The options are: `1 - Coordinator, 2 - Editor, 3 - Reader, 4 - RCPCH Audit Team`. If the integer selected in 1-3 (ie a role within the NPDA site) KCH is automatically allocated. A superuser is always created with the RCPCH Audit Team role.
 
 Further users can subsequently be created in the Admin UI
 

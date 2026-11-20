@@ -7,7 +7,7 @@ from django.apps import apps
 from django.urls import reverse
 
 # RCPCH imports
-from project.constants import AUDIT_CENTRE_COORDINATOR
+from project.constants import AUDIT_CENTRE_COORDINATOR, RCPCH_AUDIT_TEAM
 from project.npda.models import AuditPeriod, NPDAUser, Submission
 from project.npda.tests.factories.patient_factory import PatientFactory
 from project.npda.tests.factories.visit_factory import VisitFactory
@@ -196,7 +196,7 @@ def test_rcpch_audit_team_can_edit_patients_from_any_pdu(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
     ).first()
 
-    rcpch_user = NPDAUser.objects.filter(is_rcpch_audit_team_member=True).first()
+    rcpch_user = NPDAUser.objects.filter(role=RCPCH_AUDIT_TEAM).first()
 
     gosh_patient = create_submission_with_patient(gosh_user)
     ah_patient = create_submission_with_patient(ah_user)
@@ -275,7 +275,7 @@ def test_rcpch_audit_team_can_see_visits_from_all_pdus(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
     ).first()
 
-    rcpch_user = NPDAUser.objects.filter(is_rcpch_audit_team_member=True).first()
+    rcpch_user = NPDAUser.objects.filter(role=RCPCH_AUDIT_TEAM).first()
 
     gosh_patient = create_submission_with_patient(gosh_user)
     ah_patient = create_submission_with_patient(ah_user)
@@ -394,7 +394,7 @@ def test_rcpch_audit_team_can_edit_visits_from_all_pdus(
         organisation_employers__pz_code=ALDER_HEY_PZ_CODE
     ).first()
 
-    rcpch_user = NPDAUser.objects.filter(is_rcpch_audit_team_member=True).first()
+    rcpch_user = NPDAUser.objects.filter(role=RCPCH_AUDIT_TEAM).first()
 
     gosh_patient = create_submission_with_patient(gosh_user)
     gosh_visit = VisitFactory(patient=gosh_patient)

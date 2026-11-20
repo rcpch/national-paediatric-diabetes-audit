@@ -44,8 +44,6 @@ def test_both_jersey_and_england_template_download_works(
         role=test_user_rcpch_audit_team_data.role,
         is_active=True,
         is_staff=False,
-        is_rcpch_audit_team_member=test_user_rcpch_audit_team_data.is_rcpch_audit_team_member,
-        is_rcpch_staff=test_user_rcpch_audit_team_data.is_rcpch_staff,
         groups=[test_user_rcpch_audit_team_data.group_name],
         organisation_employers=["PZ248"],
     )

@@ -26,8 +26,6 @@ NPDAUserFactory(
     # Assign flags based on user role
     is_active=True,
     is_staff=False,
-    is_rcpch_audit_team_member=False,
-    is_rcpch_staff=False,
     organisation_employers=["RGT01"],
     groups=[test_user_audit_centre_reader_data.group_name],
 )
@@ -37,8 +35,6 @@ NPDAUserFactory(
     # Assign flags based on user role
     is_active=True,
     is_staff=False,
-    is_rcpch_audit_team_member=False,
-    is_rcpch_staff=False,
     organisation_employers=["RGT01"],
     groups=[test_user_audit_centre_editor_data.group_name],
 )
@@ -49,8 +45,6 @@ NPDAUserFactory(
     # Assign flags based on user role
     is_active=True,
     is_staff=False,
-    is_rcpch_audit_team_member=False,
-    is_rcpch_staff=False,
     organisation_employers=["RGT01"],
     groups=[test_user_rcpch_audit_team_data.group_name],
 )
@@ -62,8 +56,6 @@ NPDAUserFactory(
     surname="WELSH",
     is_active=False,
     is_staff=False,
-    is_rcpch_audit_team_member=False,
-    is_rcpch_staff=False,
     organisation_employers=["RGT01"],
     groups=[test_user_audit_centre_coordinator_data.group_name],
 )

@@ -402,19 +402,6 @@ def employer_match(user_to_match, user):
 
 
 @register.filter
-def exclude_admin_user_field(field, user):
-    """
-    Hides the RCPCH flag toggles on the npda user form unless the user may give
-    out the RCPCH Audit Team role. Returns True if the field should be shown.
-    """
-    if field.id_for_label in ["id_is_rcpch_staff", "id_is_rcpch_audit_team_member"]:
-        return user.has_perm("npda.can_assign_rcpch_audit_team_role")
-    if field.id_for_label in ["id_is_staff", "id_is_superuser"]:
-        return user.is_superuser
-    return True
-
-
-@register.filter
 def include_admin_users(user):
     """
     Returns true if the user can manage users in any PDU

@@ -197,9 +197,8 @@ def groups_seeder(verbose=True, **_deprecated_kwargs):
     ]
 
     """
-    Replace the is_rcpch_audit_team_member / is_rcpch_staff flags.
-    Only the RCPCH audit team group may hold these.
-    See documentation/docs/developer/rcpch-flags-retirement-plan.md
+    National access. Only the RCPCH audit team group may hold these.
+    See documentation/docs/developer/users.md
     """
     RCPCH_AUDIT_TEAM_ONLY_PERMISSIONS = [
         {"codename": CAN_ACCESS_ALL_PDUS[0], "content_type": pduContentType},

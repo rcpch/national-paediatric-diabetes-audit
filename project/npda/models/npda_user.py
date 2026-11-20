@@ -83,10 +83,6 @@ class NPDAUserManager(BaseUserManager):
             user.is_active = False
         if not extra_fields.get("is_staff"):
             user.is_staff = False
-        if not extra_fields.get("is_rcpch_audit_team_member"):
-            user.is_rcpch_audit_team_member = False
-        if not extra_fields.get("is_rcpch_staff"):
-            user.is_rcpch_staff = False
         if not extra_fields.get("is_patient_or_carer"):
             user.is_patient_or_carer = False
         # user not active until has confirmed by email
@@ -127,8 +123,6 @@ class NPDAUserManager(BaseUserManager):
             is_superuser=True,
             is_active=True,
             is_staff=True,
-            is_rcpch_audit_team_member=True,
-            is_rcpch_staff=True,
             email_confirmed=True,
             is_primary_employer=True,
         )
@@ -163,17 +157,6 @@ class NPDAUser(AbstractUser, PermissionsMixin):
         default=False
     )
     is_superuser = models.BooleanField(default=False)
-    is_rcpch_audit_team_member = models.BooleanField(
-        # reflects is a member of the RCPCH audit team. If is_rcpch_audit_team_member is True and
-        # is_rcpch_staff is False, user is also a clinician/organisation admin and therefore must
-        # may be affiliated with a organisation trust
-        default=False
-    )
-    is_rcpch_staff = models.BooleanField(
-        # reflects if user is an RCPCH employee
-        # Any non-RCPCH staff must be affiliated with an organisation
-        default=False
-    )
     is_patient_or_carer = models.BooleanField(
         # reflects is a patient or carer
         # must be affiliated with an organisation
@@ -190,7 +173,7 @@ class NPDAUser(AbstractUser, PermissionsMixin):
     )
     feature_flags = models.JSONField(default=list, blank=True)
 
-    REQUIRED_FIELDS = ["role", "first_name", "surname", "is_rcpch_audit_team_member"]
+    REQUIRED_FIELDS = ["role", "first_name", "surname"]
     USERNAME_FIELD = "email"
 
     objects = NPDAUserManager()
@@ -258,12 +241,15 @@ class NPDAUser(AbstractUser, PermissionsMixin):
     def get_all_employer_organisations(self):
         return self.organisation_employers.all()
 
+    @property
+    def has_rcpch_audit_team_role(self):
+        """
+        What the user is, not what they may do: check permissions with has_perm.
+        """
+        return self.role == RCPCH_AUDIT_TEAM
+
     def user_roles(self):
         roles = []
-        if self.is_rcpch_audit_team_member:
-            roles.append("RCPCH Audit Team Member")
-        if self.is_rcpch_staff:
-            roles.append("RCPCH Staff")
         if self.is_patient_or_carer:
             roles.append("Patient or Carer")
         if self.role == RCPCH_AUDIT_TEAM:

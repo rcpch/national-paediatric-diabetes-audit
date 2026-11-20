@@ -129,9 +129,8 @@ CAN_DOWNLOAD_CSV = (
     "Can download a CSV file from NPDA.",
 )
 
-# RCPCH audit team. These replace the is_rcpch_audit_team_member and
-# is_rcpch_staff flags and are only granted to NPDA_AUDIT_TEAM_FULL_ACCESS.
-# See documentation/docs/developer/rcpch-flags-retirement-plan.md
+# RCPCH audit team: national access. Only granted to NPDA_AUDIT_TEAM_FULL_ACCESS.
+# See documentation/docs/developer/users.md
 
 # PaediatricDiabetesUnit
 CAN_ACCESS_ALL_PDUS = (
