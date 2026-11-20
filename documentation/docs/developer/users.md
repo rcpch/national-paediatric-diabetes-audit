@@ -163,3 +163,8 @@ In addition to logging, there are also signals set up in `signals.py` which list
 | 'email' | 'email' |
 | 'first_name' | 'is_superuser' |
 | 'surname' | joining `npda_audit_team_full_access` |
+
+The retired `is_rcpch_audit_team_member` and `is_rcpch_staff` flags have no fields any more, but their history is kept in `VisitActivity` (activity 13, "Superuser or admin status changed"):
+
+- Changes to either flag from July 2025 onwards, with the old and new value, who made them and when.
+- One "RCPCH flags at removal: …" entry per user who had either flag set when the fields were removed (migration `0048`). Work backwards from it through the logged changes to find a user's flags at any point since July 2025.
