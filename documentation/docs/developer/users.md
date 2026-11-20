@@ -164,7 +164,7 @@ In addition to logging, there are also signals set up in `signals.py` which list
 | 'first_name' | 'is_superuser' |
 | 'surname' | joining `npda_audit_team_full_access` |
 
-The retired `is_rcpch_audit_team_member` and `is_rcpch_staff` flags have no fields any more, but their history is kept in `VisitActivity` (activity 13, "Superuser or admin status changed"):
+The retired `is_rcpch_audit_team_member` and `is_rcpch_staff` flags have no fields any more, but their history is kept in `VisitActivity`:
 
-- Changes to either flag from July 2025 onwards, with the old and new value, who made them and when.
-- One "RCPCH flags at removal: …" entry per user who had either flag set when the fields were removed (migration `0048`). Work backwards from it through the logged changes to find a user's flags at any point since July 2025.
+- Changes to either flag from July 2025 onwards, with the old and new value, who made them and when. Find them by the flag name in `details`, not by activity code. A save that changed the role as well was logged as activity 12 ("User role changed"), which the Django admin did whenever it changed a role. Any other flag change was logged as activity 13 ("Superuser or admin status changed").
+- One "RCPCH flags at removal: …" entry (activity 13) per user who had either flag set when the fields were removed (migration `0048`). Work backwards from it through the logged changes to find a user's flags at any point since July 2025.
