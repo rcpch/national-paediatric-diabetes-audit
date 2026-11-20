@@ -35,5 +35,22 @@
       <input type="submit" value="" hidden />
       {% include "two_factor/_wizard_actions.html" %}
     </form>
+    {% if wizard.steps.current == 'auth' and entra_id_login_enabled %}
+      <div class="w-full max-w-md flex flex-col mt-5">
+        <div class="flex items-center my-3">
+          <hr class="flex-grow border-gray-300">
+          <span class="px-3 text-gray-500 font-montserrat">or</span>
+          <hr class="flex-grow border-gray-300">
+        </div>
+        <a href="{% url 'entra_id_login' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}"
+           id="entra_id_login_button"
+           class="text-center px-4 py-2 font-semibold text-white bg-rcpch_light_blue hover:bg-rcpch_strong_blue rounded-none">
+          Sign in with Microsoft
+        </a>
+        <p class="mt-2 text-sm text-gray-700 text-center">
+          For superusers and RCPCH Audit Team members only{% if entra_id_login_required %}, who must sign in this way{% endif %}.
+        </p>
+      </div>
+    {% endif %}
   </div>
 {% endblock content %}

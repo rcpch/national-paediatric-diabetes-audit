@@ -13,6 +13,10 @@ from django.utils.translation import gettext as _
 
 # RCPCH imports
 from ...constants.styles.form_styles import *
+from ..general_functions.entra_id import (
+    ENTRA_ID_LOGIN_REQUIRED_MESSAGE,
+    must_use_entra_id_login,
+)
 from ..general_functions.inactivity_deactivation import (
     deactivate_user_for_inactivity,
     get_inactivity_deactivation_message,
@@ -170,7 +174,43 @@ class CaptchaAuthenticationForm(AuthenticationForm):
             )
             self.fields["captcha"].required = False
 
+    def refuse_password_login_if_entra_id_required(self, user):
+        """
+        Superusers and the RCPCH Audit Team must sign in with Microsoft Entra
+        ID when the setting is on. Their password and 2FA devices are left in
+        place so that switching the setting off restores this login.
+        """
+        if must_use_entra_id_login(user):
+            VisitActivity.objects.create(
+                activity=VisitActivity.UNSUCCESSFUL_LOGIN,
+                ip_address=get_client_ip(self.request),
+                npdauser=user,
+                details="Password login refused: user must sign in with Microsoft Entra ID",
+            )
+            logger.info(
+                "Password login refused for %s: must sign in with Entra ID", user.email
+            )
+            raise forms.ValidationError(
+                ENTRA_ID_LOGIN_REQUIRED_MESSAGE,
+                code="entra_id_required",
+            )
+
+    def clean(self):
+        # Refuse before the password is checked, so that the refusal does not
+        # tell anyone whether they guessed the password of one of these users
+        username = self.cleaned_data.get("username")
+        if username:
+            # email is case insensitive (CIEmailField)
+            user = NPDAUser.objects.filter(email=username).first()
+            if user is not None:
+                self.refuse_password_login_if_entra_id_required(user)
+
+        return super().clean()
+
     def confirm_login_allowed(self, user):
+        # Belt and braces: clean() has normally refused these users already
+        self.refuse_password_login_if_entra_id_required(user)
+
         # Deactivate the account if the user has not logged in for longer
         # than the configured inactivity period
         if is_inactive_beyond_deactivation_period(user):

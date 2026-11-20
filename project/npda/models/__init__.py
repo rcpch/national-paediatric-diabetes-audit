@@ -1,6 +1,7 @@
 from .audit_period import *
 from .banner import *
 from .db_functions import *
+from .entra_id_device import EntraIDDevice
 from .help_text_mixin import *
 from .npda_user import *
 from .organisation_employer import *

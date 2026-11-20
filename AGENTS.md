@@ -125,6 +125,21 @@ Keep the API key plumbing aligned with `project/npda/general_functions/index_mul
 
 ---
 
+### Microsoft Entra ID sign in
+
+Superusers and RCPCH Audit Team members can sign in with Microsoft Entra ID; `ENTRA_ID_LOGIN_REQUIRED_FOR_RCPCH_STAFF` makes it compulsory for them. See `documentation/docs/developer/entra-id-login.md`.
+
+| Path | Purpose |
+| --- | --- |
+| `project/npda/general_functions/entra_id.py` | `may_use_entra_id_login` / `must_use_entra_id_login` and the msal client |
+| `project/npda/views/entra_id.py` | `entra_id_login` and `entra_id_callback` views |
+| `project/npda/models/entra_id_device.py` | `EntraIDDevice`: a django-otp device binding the user to their Microsoft account, so `is_verified()` works unchanged |
+| `project/npda/middleware.py` | `EntraIDLoginRequiredMiddleware`: ends password sessions of users who must use Entra ID |
+
+Never delete or change passwords or 2FA devices to enforce this: switching the setting off must restore the old login.
+
+---
+
 ## Test conventions
 
 ### Required fixtures

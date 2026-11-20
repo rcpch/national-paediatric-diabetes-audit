@@ -34,6 +34,7 @@ from .views import (
 from .views.dashboard import dashboard, partials
 from .views.dashboard.patient_characteristics import all_patient_charts, patient_ages
 from .views.dashboard.patient_measurements import patient_measurements
+from .views.entra_id import entra_id_callback, entra_id_login
 from .views.patient_report import patient_report
 
 data_prefix = "period/<str:audit_period>/pdu/<str:pz_code>"
@@ -121,6 +122,12 @@ urlpatterns = [
     ),
     # Authentication -> NOTE: 2FA is implemented in project-level URLS with tf_urls
     path("captcha/", include("captcha.urls")),
+    path("account/entra-id/login/", view=entra_id_login, name="entra_id_login"),
+    path(
+        "account/entra-id/callback/",
+        view=entra_id_callback,
+        name="entra_id_callback",
+    ),
     path("account/", include(auth_urls)),
     path(
         "account/password-reset/",

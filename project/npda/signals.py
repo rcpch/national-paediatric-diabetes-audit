@@ -83,6 +83,7 @@ ACTIVITY = (
     (16, "User removed from PDU"),  # REMOVED_USER_FROM_PDU
     (17, "User PDU role changed"),  # USER_PDU_ROLE_CHANGED
     (18, "Account deactivated due to inactivity"),  # ACCOUNT_DEACTIVATED_INACTIVITY
+    (19, "Microsoft Entra ID login failed"),  # ENTRA_ID_LOGIN_FAILED
 )
 
 

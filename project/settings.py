@@ -17,6 +17,7 @@ from datetime import timedelta
 from pathlib import Path
 
 #  django imports
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 # Has to be before logging_settings as that reads ENABLE_REQUEST_LOGGING
@@ -159,6 +160,8 @@ MIDDLEWARE = [
     "django_htmx.middleware.HtmxMiddleware",
     #  2 factor authentication
     "django_otp.middleware.OTPMiddleware",
+    # Must come after OTPMiddleware as it inspects request.user.otp_device
+    "project.npda.middleware.EntraIDLoginRequiredMiddleware",
     # autologout
     "django_auto_logout.middleware.auto_logout",
     # set logging context variables (eg user)
@@ -315,6 +318,37 @@ AUTH_PASSWORD_VALIDATORS = [
     #     "NAME": "npda.validators.NumberValidator",  # must have one number
     # },
 ]
+
+# MICROSOFT ENTRA ID SIGN IN (OAuth 2.0 / OpenID Connect)
+# Superusers and RCPCH Audit Team members can sign in with their RCPCH Microsoft
+# account. Sign in with Microsoft is offered whenever the app registration below
+# is configured.
+ENTRA_ID_TENANT_ID = os.getenv("ENTRA_ID_TENANT_ID", "")
+ENTRA_ID_CLIENT_ID = os.getenv("ENTRA_ID_CLIENT_ID", "")
+ENTRA_ID_CLIENT_SECRET = os.getenv("ENTRA_ID_CLIENT_SECRET", "")
+ENTRA_ID_LOGIN_ENABLED = bool(
+    ENTRA_ID_TENANT_ID and ENTRA_ID_CLIENT_ID and ENTRA_ID_CLIENT_SECRET
+)
+
+# When True, superusers and RCPCH Audit Team members MUST sign in with Microsoft
+# Entra ID: the email, password and one-time code login is refused for them and
+# any session they started that way is ended. Their existing passwords and 2FA
+# devices are left untouched, so setting this back to False (and restarting)
+# restores the old login.
+ENTRA_ID_LOGIN_REQUIRED_FOR_RCPCH_STAFF = (
+    os.getenv("ENTRA_ID_LOGIN_REQUIRED_FOR_RCPCH_STAFF", "False") == "True"
+)
+if ENTRA_ID_LOGIN_REQUIRED_FOR_RCPCH_STAFF and not ENTRA_ID_LOGIN_ENABLED:
+    # Fail fast rather than lock every superuser out of the app
+    raise ImproperlyConfigured(
+        "ENTRA_ID_LOGIN_REQUIRED_FOR_RCPCH_STAFF is True but ENTRA_ID_TENANT_ID, "
+        "ENTRA_ID_CLIENT_ID and ENTRA_ID_CLIENT_SECRET are not all set."
+    )
+logger.info(
+    "ENTRA_ID_LOGIN_ENABLED: %s, ENTRA_ID_LOGIN_REQUIRED_FOR_RCPCH_STAFF: %s",
+    ENTRA_ID_LOGIN_ENABLED,
+    ENTRA_ID_LOGIN_REQUIRED_FOR_RCPCH_STAFF,
+)
 
 # Two Factor Authentication / One Time Password Settings (2FA / one-time login codes)
 OTP_EMAIL_SUBJECT = "Your National Paediatric Diabetes Audit one-time login code"

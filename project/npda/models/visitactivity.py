@@ -22,6 +22,7 @@ class VisitActivity(models.Model):
     REMOVED_USER_FROM_PDU = 16
     USER_PDU_ROLE_CHANGED = 17
     ACCOUNT_DEACTIVATED_INACTIVITY = 18
+    ENTRA_ID_LOGIN_FAILED = 19
     ACTIVITY = (
         (SUCCESSFUL_LOGIN, "Successful login"),
         (UNSUCCESSFUL_LOGIN, "Login failed"),
@@ -47,6 +48,7 @@ class VisitActivity(models.Model):
             ACCOUNT_DEACTIVATED_INACTIVITY,
             "Account deactivated due to inactivity",
         ),
+        (ENTRA_ID_LOGIN_FAILED, "Microsoft Entra ID login failed"),
     )
 
     activity_datetime = models.DateTimeField(auto_created=True, default=timezone.now)
