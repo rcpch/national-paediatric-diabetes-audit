@@ -155,14 +155,18 @@ Logging settings are in the `logging_settings.py` file and specify what level of
 
 In addition to logging, there are also signals set up in `signals.py` which listen for changes to the NPDAUser model, users logging in and out as well as using or setting up 2FA. For more important events, such as changing users, an email step is included.
 
-| Logging Triggers | Email Triggers |
-| --- | --- |
-| 'role' | 'role' |
-| 'is_active' | 'is_active' |
-| 'is_staff' | 'is_staff' |
-| 'email' | 'email' |
-| 'first_name' | 'is_superuser' |
-| 'surname' | joining `npda_audit_team_full_access` |
+| Field | Logged | Emailed to |
+| --- | --- | --- |
+| `role` | ✔️ | admins |
+| `is_active` | ✔️ | admins (not for automatic deactivation after inactivity) |
+| `is_superuser` | ✔️ | admins |
+| `is_staff` | ✔️ | admins |
+| `email` | ✔️ | the user, at the old and new address |
+| `first_name` | ✔️ | - |
+| `surname` | ✔️ | - |
+| joining `npda_audit_team_full_access` | ✔️ | admins |
+
+The admins are the addresses in `CHANGE_NOTIFICATION_EMAILS`.
 
 The retired `is_rcpch_audit_team_member` and `is_rcpch_staff` flags have no fields any more, but their history is kept in `VisitActivity`:
 
