@@ -1,72 +1,65 @@
 """
-Migration 0048 removes the retired is_rcpch_audit_team_member / is_rcpch_staff
-fields from the model but keeps their columns, so the previous revision keeps
-working while a deploy drains. It also records who held the flags.
+The retired is_rcpch_audit_team_member / is_rcpch_staff fields.
 
-The columns still exist in the test database, so the tests reach them through
-the model as it was at 0047.
+0048 recorded who held the flags in VisitActivity and removed the fields from
+the model, keeping the columns while the previous revision drained. 0049 drops
+the columns.
 """
 
 import importlib
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 from django.db import connection
-from django.db.migrations.loader import MigrationLoader
 
-from project.constants import AUDIT_CENTRE_COORDINATOR, RCPCH_AUDIT_TEAM
-from project.npda.models import VisitActivity
-from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
+FLAG_COLUMNS = {"is_rcpch_audit_team_member", "is_rcpch_staff"}
 
-migration = importlib.import_module(
+remove_from_models = importlib.import_module(
     "project.npda.migrations.0048_remove_rcpch_user_flags_from_models"
 )
 
 
-def _apps_before_removal():
-    loader = MigrationLoader(connection)
-    return loader.project_state(("npda", "0047_rcpch_audit_team_permissions")).apps
-
-
 @pytest.mark.django_db
-def test_new_users_get_false_from_the_column_default(seed_groups_fixture):
-    """Inserts that omit the columns still work, and old code reads False."""
-    user = NPDAUserFactory(role=RCPCH_AUDIT_TEAM)
+def test_flag_columns_are_dropped():
+    with connection.cursor() as cursor:
+        columns = {
+            column.name
+            for column in connection.introspection.get_table_description(
+                cursor, "npda_npdauser"
+            )
+        }
 
-    OldNPDAUser = _apps_before_removal().get_model("npda", "NPDAUser")
-    old_user = OldNPDAUser.objects.get(pk=user.pk)
-
-    assert old_user.is_rcpch_audit_team_member is False
-    assert old_user.is_rcpch_staff is False
+    assert "role" in columns
+    assert not FLAG_COLUMNS & columns
 
 
-@pytest.mark.django_db
-def test_flags_are_recorded_in_visit_activity(seed_groups_fixture):
-    both = NPDAUserFactory(role=RCPCH_AUDIT_TEAM)
-    staff_only = NPDAUserFactory(role=AUDIT_CENTRE_COORDINATOR)
-    neither = NPDAUserFactory(role=AUDIT_CENTRE_COORDINATOR)
-
-    old_apps = _apps_before_removal()
-    OldNPDAUser = old_apps.get_model("npda", "NPDAUser")
-    OldNPDAUser.objects.filter(pk=both.pk).update(
-        is_rcpch_audit_team_member=True, is_rcpch_staff=True
-    )
-    OldNPDAUser.objects.filter(pk=staff_only.pk).update(is_rcpch_staff=True)
-
-    migration.record_flags_at_removal(old_apps, None)
-
-    def recorded(user):
-        return list(
-            VisitActivity.objects.filter(
-                npdauser=user,
-                activity=13,
-                details__startswith="RCPCH flags at removal",
-            ).values_list("details", flat=True)
-        )
-
-    assert recorded(both) == [
-        "RCPCH flags at removal: is_rcpch_audit_team_member=True, is_rcpch_staff=True"
+def test_flags_at_removal_are_recorded_per_flagged_user():
+    """
+    0048's snapshot writes one activity 13 entry per flagged user. The columns
+    are gone, so this checks it against stand-in models.
+    """
+    NPDAUser = MagicMock()
+    NPDAUser.objects.filter.return_value.values_list.return_value = [
+        (1, True, True),
+        (2, False, True),
     ]
-    assert recorded(staff_only) == [
-        "RCPCH flags at removal: is_rcpch_audit_team_member=False, is_rcpch_staff=True"
+    VisitActivity = MagicMock(side_effect=lambda **fields: SimpleNamespace(**fields))
+    models = {"NPDAUser": NPDAUser, "VisitActivity": VisitActivity}
+    apps = SimpleNamespace(get_model=lambda app_label, name: models[name])
+
+    remove_from_models.record_flags_at_removal(apps, None)
+
+    (created,), _ = VisitActivity.objects.bulk_create.call_args
+    assert [(a.npdauser_id, a.activity, a.details) for a in created] == [
+        (
+            1,
+            13,
+            "RCPCH flags at removal: is_rcpch_audit_team_member=True, is_rcpch_staff=True",
+        ),
+        (
+            2,
+            13,
+            "RCPCH flags at removal: is_rcpch_audit_team_member=False, is_rcpch_staff=True",
+        ),
     ]
-    assert recorded(neither) == []
