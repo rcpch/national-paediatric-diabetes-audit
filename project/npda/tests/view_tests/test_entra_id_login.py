@@ -5,14 +5,21 @@ superusers and the RCPCH Audit Team.
 
 Microsoft is never contacted: the msal client is replaced with a fake that
 returns the ID token claims we choose.
+
+Ported from rcpch/rcpch-audit-engine's test_entra_id_login.py.
 """
 
+import os
+import re
+import subprocess
+import sys
 from http import HTTPStatus
 from unittest.mock import patch
 
 import pytest
-from django.contrib.auth import authenticate
+from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.test import override_settings
 from django.urls import reverse
 from django_otp import DEVICE_ID_SESSION_KEY
@@ -20,14 +27,16 @@ from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from project.constants import AUDIT_CENTRE_EDITOR, RCPCH_AUDIT_TEAM
 from project.npda.forms.npda_user_form import CaptchaAuthenticationForm
+from project.npda.general_functions import entra_id as entra_id_module
 from project.npda.general_functions.entra_id import (
-    ENTRA_ID_LOGIN_REQUIRED_MESSAGE,
+    build_entra_id_client,
+    get_managed_identity_assertion,
+    is_entra_id_email,
     may_use_entra_id_login,
     must_use_entra_id_login,
 )
 from project.npda.models import EntraIDDevice, NPDAUser, VisitActivity
 from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
-from project.npda.tests.utils import twofactor_signin
 from project.npda.views.entra_id import (
     ENTRA_ID_FLOW_SESSION_KEY,
     ENTRA_ID_NEXT_SESSION_KEY,
@@ -41,10 +50,15 @@ ENTRA_CONFIGURED = {
     "ENTRA_ID_TENANT_ID": TENANT_ID,
     "ENTRA_ID_CLIENT_ID": "client-id",
     "ENTRA_ID_CLIENT_SECRET": "client-secret",
+    "ENTRA_ID_USE_MANAGED_IDENTITY": False,
+    "ENTRA_ID_EMAIL_DOMAIN": "rcpch.ac.uk",
     "ENTRA_ID_LOGIN_ENABLED": True,
 }
 ENTRA_REQUIRED = {**ENTRA_CONFIGURED, "ENTRA_ID_LOGIN_REQUIRED_FOR_RCPCH_STAFF": True}
 ENTRA_OPTIONAL = {**ENTRA_CONFIGURED, "ENTRA_ID_LOGIN_REQUIRED_FOR_RCPCH_STAFF": False}
+
+# The Sign in with Microsoft container, when hidden
+HIDDEN_ENTRA_ID_LOGIN = rb'<div id="entra_id_login"[^>]*\shidden\s*>'
 
 
 class FakeEntraClient:
@@ -55,8 +69,9 @@ class FakeEntraClient:
         self.raises = raises
         self.redeemed_with = None
 
-    def initiate_auth_code_flow(self, scopes, redirect_uri, prompt):
+    def initiate_auth_code_flow(self, scopes, redirect_uri, **kwargs):
         self.redirect_uri = redirect_uri
+        self.account_selection = kwargs
         return {
             "auth_uri": "https://login.microsoftonline.com/authorize?state=abc",
             "state": "abc",
@@ -69,8 +84,14 @@ class FakeEntraClient:
         return self.result
 
 
-def claims_for(email, tid=TENANT_ID, oid=OBJECT_ID):
-    return {"id_token_claims": {"tid": tid, "oid": oid, "preferred_username": email}}
+def claims_for(preferred_username, tid=TENANT_ID, oid=OBJECT_ID, **extra):
+    claims = {
+        "tid": tid,
+        "oid": oid,
+        "preferred_username": preferred_username,
+        **extra,
+    }
+    return {"id_token_claims": claims}
 
 
 def complete_entra_sign_in(client, fake_client, next_url=None):
@@ -110,24 +131,50 @@ def audit_team_member(seed_groups_fixture):
 
 @pytest.fixture
 def clinician(seed_groups_fixture):
-    return make_user(role=AUDIT_CENTRE_EDITOR, email="clinician@nhs.net")
+    # An audit team test account on the RCPCH domain, with a PDU role
+    return make_user(role=AUDIT_CENTRE_EDITOR, email="first.last+editor@rcpch.ac.uk")
 
 
-def password_login(client, user):
-    """Sign in with email and password, as the CI environment does."""
-    return client.post(
-        reverse("two_factor:login"),
-        {
-            "rcpch_login_view-current_step": "auth",
-            "auth-username": user.email,
-            "auth-password": PASSWORD,
-            "auth-captcha_0": "x",
-            "auth-captcha_1": "PASSED",
-        },
-    )
+def post_password_login(client, email, password=PASSWORD):
+    with patch("captcha.conf.settings.CAPTCHA_TEST_MODE", True):
+        return client.post(
+            reverse("two_factor:login"),
+            {
+                "rcpch_login_view-current_step": "auth",
+                "auth-username": email,
+                "auth-password": password,
+                "auth-captcha_0": "x",
+                "auth-captcha_1": "PASSED",
+            },
+        )
 
 
 # Who the setting covers
+
+
+@override_settings(ENTRA_ID_EMAIL_DOMAIN="rcpch.ac.uk")
+@pytest.mark.parametrize(
+    "email,expected",
+    [
+        ("someone@rcpch.ac.uk", True),
+        ("  Someone@RCPCH.ac.uk ", True),
+        ("first.last+editor@rcpch.ac.uk", True),
+        ("someone@nhs.net", False),
+        ("someone@notrcpch.ac.uk", False),
+        ("someone@rcpch.ac.uk.evil.com", False),
+        ("@rcpch.ac.uk", False),
+        ("rcpch.ac.uk", False),
+        ("", False),
+        (None, False),
+    ],
+)
+def test_is_entra_id_email(email, expected):
+    assert is_entra_id_email(email) is expected
+
+
+@override_settings(ENTRA_ID_EMAIL_DOMAIN="")
+def test_no_email_is_entra_id_email_without_a_domain():
+    assert is_entra_id_email("someone@rcpch.ac.uk") is False
 
 
 @pytest.mark.django_db
@@ -171,8 +218,8 @@ def test_password_login_refused_for_rcpch_staff_when_required(request, user_fixt
     with pytest.raises(ValidationError) as excinfo:
         form.confirm_login_allowed(user)
 
-    assert excinfo.value.code == "entra_id_required"
-    assert "sign in with Microsoft" in str(excinfo.value)
+    # The same error as a wrong password, so a correct password is not revealed
+    assert excinfo.value.code == "invalid_login"
 
     refused = VisitActivity.objects.get(
         npdauser=user, activity=VisitActivity.UNSUCCESSFUL_LOGIN
@@ -203,64 +250,48 @@ def test_password_login_allowed_for_clinicians_when_required(clinician):
 
 
 @pytest.mark.django_db
-@override_settings(LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA=False, **ENTRA_REQUIRED)
-def test_password_login_view_refuses_rcpch_staff_when_required(client, superuser):
-    with patch("captcha.conf.settings.CAPTCHA_TEST_MODE", True):
-        response = password_login(client, superuser)
+@pytest.mark.parametrize("bypass_2fa", [False, True])
+def test_password_login_view_refuses_rcpch_staff_when_required(
+    client, superuser, bypass_2fa
+):
+    # Also refused by the local development 2FA and captcha bypass
+    with override_settings(
+        LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA=bypass_2fa, **ENTRA_REQUIRED
+    ):
+        response = post_password_login(client, superuser.email)
 
     assert response.status_code == HTTPStatus.OK
-    assert response.context["form"].non_field_errors() == [
-        ENTRA_ID_LOGIN_REQUIRED_MESSAGE
-    ]
+    form = response.context["form"]
+    # The normal "incorrect email or password" error
+    assert form.non_field_errors().as_data()[0].code == "invalid_login"
     assert "_auth_user_id" not in client.session
 
-
-@pytest.mark.django_db
-@override_settings(LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA=False, **ENTRA_REQUIRED)
-def test_password_login_view_refusal_does_not_reveal_whether_password_is_right(
-    client, superuser
-):
-    with patch("captcha.conf.settings.CAPTCHA_TEST_MODE", True):
-        with patch(
-            "django.contrib.auth.forms.authenticate", wraps=authenticate
-        ) as checked_password:
-            response = client.post(
-                reverse("two_factor:login"),
-                {
-                    "rcpch_login_view-current_step": "auth",
-                    "auth-username": superuser.email.upper(),
-                    "auth-password": "the-wrong-password",
-                    "auth-captcha_0": "x",
-                    "auth-captcha_1": "PASSED",
-                },
-            )
-
-    # Refused with the same message as for the right password, before the
-    # password is checked at all
-    assert response.context["form"].non_field_errors() == [
-        ENTRA_ID_LOGIN_REQUIRED_MESSAGE
-    ]
-    checked_password.assert_not_called()
-    assert "_auth_user_id" not in client.session
-
-
-@pytest.mark.django_db
-@override_settings(LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA=True, **ENTRA_REQUIRED)
-def test_local_dev_bypass_login_refuses_rcpch_staff_when_required(client, superuser):
-    response = password_login(client, superuser)
-
-    assert response.status_code == HTTPStatus.FOUND
-    assert response.url == reverse("two_factor:login")
-    assert "_auth_user_id" not in client.session
+    # Sign in with Microsoft is shown because the email is on the domain
+    assert response.context["entra_id_login_hint"] == superuser.email
 
 
 @pytest.mark.django_db
 @override_settings(LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA=True, **ENTRA_OPTIONAL)
 def test_local_dev_bypass_login_allows_rcpch_staff_when_not_required(client, superuser):
-    response = password_login(client, superuser)
+    response = post_password_login(client, superuser.email)
 
     assert response.status_code == HTTPStatus.FOUND
     assert int(client.session["_auth_user_id"]) == superuser.pk
+
+
+@pytest.mark.django_db
+@override_settings(LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA=False, **ENTRA_REQUIRED)
+def test_refused_staff_password_looks_the_same_as_a_wrong_password(client, superuser):
+    correct = post_password_login(client, superuser.email, PASSWORD)
+    wrong = post_password_login(client, superuser.email, "Not-The-Password-1!")
+
+    assert (
+        correct.context["form"].non_field_errors()
+        == wrong.context["form"].non_field_errors()
+    )
+    assert (
+        correct.context["entra_id_login_hint"] == wrong.context["entra_id_login_hint"]
+    )
 
 
 # Login page
@@ -268,15 +299,39 @@ def test_local_dev_bypass_login_allows_rcpch_staff_when_not_required(client, sup
 
 @pytest.mark.django_db
 @override_settings(**ENTRA_OPTIONAL)
-def test_login_page_offers_sign_in_with_microsoft_when_configured(client):
+def test_login_page_hides_sign_in_with_microsoft_until_domain_email_typed(client):
     response = client.get(reverse("two_factor:login"))
 
-    assert b"Sign in with Microsoft" in response.content
+    # Present for the JavaScript to reveal, but hidden
+    assert b'data-email-domain="rcpch.ac.uk"' in response.content
+    assert response.context["entra_id_login_hint"] == ""
+    assert re.search(HIDDEN_ENTRA_ID_LOGIN, response.content)
+
+
+@pytest.mark.django_db
+@override_settings(LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA=False, **ENTRA_OPTIONAL)
+def test_login_page_shows_sign_in_with_microsoft_for_domain_email_without_js(
+    client,
+):
+    response = post_password_login(client, "Nobody@RCPCH.ac.uk", "x")
+
+    assert response.context["entra_id_login_hint"] == "nobody@rcpch.ac.uk"
+    assert not re.search(HIDDEN_ENTRA_ID_LOGIN, response.content)
+    assert b"login_hint=nobody%40rcpch.ac.uk" in response.content
+
+
+@pytest.mark.django_db
+@override_settings(LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA=False, **ENTRA_OPTIONAL)
+def test_login_page_keeps_sign_in_with_microsoft_hidden_for_other_emails(client):
+    response = post_password_login(client, "clinician@nhs.net", "x")
+
+    assert response.context["entra_id_login_hint"] == ""
+    assert re.search(HIDDEN_ENTRA_ID_LOGIN, response.content)
 
 
 @pytest.mark.django_db
 @override_settings(ENTRA_ID_LOGIN_ENABLED=False)
-def test_login_page_hides_sign_in_with_microsoft_when_not_configured(client):
+def test_login_page_has_no_sign_in_with_microsoft_when_not_configured(client):
     response = client.get(reverse("two_factor:login"))
 
     assert b"Sign in with Microsoft" not in response.content
@@ -304,6 +359,27 @@ def test_entra_id_login_redirects_to_microsoft_and_keeps_safe_next(client):
     assert fake.redirect_uri.endswith(reverse("entra_id_callback"))
     assert client.session[ENTRA_ID_FLOW_SESSION_KEY]["state"] == "abc"
     assert client.session[ENTRA_ID_NEXT_SESSION_KEY] == "/admin/"
+    assert fake.account_selection == {"prompt": "select_account"}
+
+
+@pytest.mark.django_db
+@override_settings(**ENTRA_OPTIONAL)
+def test_entra_id_login_passes_domain_email_to_microsoft(client):
+    fake = FakeEntraClient()
+    with patch("project.npda.views.entra_id.build_entra_id_client", return_value=fake):
+        client.get(reverse("entra_id_login"), {"login_hint": "Super@rcpch.ac.uk"})
+
+    assert fake.account_selection == {"login_hint": "super@rcpch.ac.uk"}
+
+
+@pytest.mark.django_db
+@override_settings(**ENTRA_OPTIONAL)
+def test_entra_id_login_ignores_login_hint_off_domain(client):
+    fake = FakeEntraClient()
+    with patch("project.npda.views.entra_id.build_entra_id_client", return_value=fake):
+        client.get(reverse("entra_id_login"), {"login_hint": "someone@nhs.net"})
+
+    assert fake.account_selection == {"prompt": "select_account"}
 
 
 @pytest.mark.django_db
@@ -350,7 +426,7 @@ def test_entra_id_sign_in_logs_in_and_verifies_rcpch_staff(
         npdauser=user, activity=VisitActivity.SUCCESSFUL_LOGIN
     ).exists()
 
-    # The session counts as 2FA verified and is not ended by the middleware
+    # The session counts as 2FA verified
     response = client.get(reverse("home"))
     assert response.status_code == HTTPStatus.OK
     assert response.wsgi_request.user.is_verified()
@@ -382,14 +458,40 @@ def test_entra_id_sign_in_reuses_bound_device(client, superuser):
     assert EntraIDDevice.objects.filter(user=superuser).count() == 1
 
 
+@pytest.mark.django_db
+@override_settings(**ENTRA_REQUIRED)
+def test_entra_id_sign_in_ignores_email_claims_off_domain(client, seed_groups_fixture):
+    """
+    A guest account in the tenant can carry an outside email address in its
+    claims. Only addresses on ENTRA_ID_EMAIL_DOMAIN are matched to users.
+    """
+    outside_superuser = make_user(
+        role=RCPCH_AUDIT_TEAM, is_superuser=True, email="developer@example.com"
+    )
+
+    response = complete_entra_sign_in(
+        client,
+        FakeEntraClient(
+            claims_for(
+                "developer_example.com#EXT#@rcpch.onmicrosoft.com",
+                email="developer@example.com",
+            )
+        ),
+    )
+
+    assert_refused(client, response)
+    assert not EntraIDDevice.objects.filter(user=outside_superuser).exists()
+
+
 def assert_refused(client, response, user=None, details_contains=None):
     assert response.status_code == HTTPStatus.FOUND
     assert response.url == reverse("two_factor:login")
     assert "_auth_user_id" not in client.session
     if user is not None:
         failure = VisitActivity.objects.get(
-            npdauser=user, activity=VisitActivity.ENTRA_ID_LOGIN_FAILED
+            npdauser=user, activity=VisitActivity.UNSUCCESSFUL_LOGIN
         )
+        assert failure.details.startswith("Microsoft Entra ID sign in failed: ")
         if details_contains:
             assert details_contains in failure.details
 
@@ -487,76 +589,243 @@ def test_entra_id_callback_refused_without_sign_in_in_progress(client, superuser
     assert fake.redeemed_with is None
 
 
-# Sessions started with a password (EntraIDLoginRequiredMiddleware)
+# How the app authenticates to Entra ID (build_entra_id_client)
 
 
-def password_session(client, user):
-    client.force_login(user)
-    twofactor_signin(client, user)
+@pytest.fixture
+def fresh_managed_identity_credential():
+    """Clear the cached credential so each test builds its own."""
+    entra_id_module._managed_identity_credential = None
+    yield
+    entra_id_module._managed_identity_credential = None
 
 
-@pytest.mark.django_db
-@override_settings(LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA=False, **ENTRA_REQUIRED)
-def test_password_session_of_rcpch_staff_ended_when_required(client, superuser):
-    password_session(client, superuser)
+@override_settings(
+    **{
+        **ENTRA_CONFIGURED,
+        "ENTRA_ID_CLIENT_SECRET": "client-secret",
+        "ENTRA_ID_USE_MANAGED_IDENTITY": False,
+    }
+)
+def test_entra_id_client_uses_client_secret():
+    with patch("msal.ConfidentialClientApplication") as client_class:
+        build_entra_id_client()
 
-    response = client.get(reverse("home"))
-
-    assert response.status_code == HTTPStatus.FOUND
-    assert response.url == reverse("two_factor:login")
-    assert "_auth_user_id" not in client.session
-    # Their credentials are not touched
-    assert TOTPDevice.objects.filter(user=superuser, name="default").exists()
-    assert NPDAUser.objects.get(pk=superuser.pk).check_password(PASSWORD)
-
-
-@pytest.mark.django_db
-@override_settings(**ENTRA_REQUIRED)
-def test_password_session_of_rcpch_staff_ended_with_htmx_redirect(client, superuser):
-    password_session(client, superuser)
-
-    response = client.get(reverse("home"), headers={"HX-Request": "true"})
-
-    assert response["HX-Redirect"] == reverse("two_factor:login")
-    assert "_auth_user_id" not in client.session
+    kwargs = client_class.call_args.kwargs
+    assert kwargs["client_id"] == "client-id"
+    assert kwargs["client_credential"] == "client-secret"
+    assert kwargs["authority"] == f"https://login.microsoftonline.com/{TENANT_ID}"
 
 
-@pytest.mark.django_db
-@override_settings(**ENTRA_REQUIRED)
-def test_password_session_of_rcpch_staff_can_go_straight_to_entra_id(client, superuser):
-    password_session(client, superuser)
-
-    with patch(
-        "project.npda.views.entra_id.build_entra_id_client",
-        return_value=FakeEntraClient(),
+@override_settings(
+    **{
+        **ENTRA_CONFIGURED,
+        "ENTRA_ID_CLIENT_SECRET": "",
+        "ENTRA_ID_USE_MANAGED_IDENTITY": True,
+        "ENTRA_ID_MANAGED_IDENTITY_CLIENT_ID": "managed-identity-client-id",
+    }
+)
+def test_entra_id_client_uses_managed_identity_as_client_assertion(
+    fresh_managed_identity_credential,
+):
+    with (
+        patch("msal.ConfidentialClientApplication") as client_class,
+        patch("azure.identity.ManagedIdentityCredential") as credential_class,
     ):
-        response = client.get(reverse("entra_id_login"))
+        credential_class.return_value.get_token.return_value.token = "mi-token"
 
-    assert response.status_code == HTTPStatus.FOUND
-    assert response.url.startswith("https://login.microsoftonline.com/")
-    assert "_auth_user_id" not in client.session
+        build_entra_id_client()
+        client_credential = client_class.call_args.kwargs["client_credential"]
+
+        # msal calls the assertion each time it needs one, so it stays current
+        assert set(client_credential) == {"client_assertion"}
+        assert client_credential["client_assertion"]() == "mi-token"
+        assert client_credential["client_assertion"]() == "mi-token"
+
+    credential_class.assert_called_once_with(client_id="managed-identity-client-id")
+    credential_class.return_value.get_token.assert_called_with(
+        "api://AzureADTokenExchange/.default"
+    )
+
+
+@override_settings(
+    **{
+        **ENTRA_CONFIGURED,
+        "ENTRA_ID_CLIENT_SECRET": "",
+        "ENTRA_ID_USE_MANAGED_IDENTITY": True,
+        "ENTRA_ID_MANAGED_IDENTITY_CLIENT_ID": "",
+    }
+)
+def test_entra_id_client_uses_system_assigned_identity_without_a_client_id(
+    fresh_managed_identity_credential,
+):
+    with patch("azure.identity.ManagedIdentityCredential") as credential_class:
+        credential_class.return_value.get_token.return_value.token = "mi-token"
+        get_managed_identity_assertion()
+
+    credential_class.assert_called_once_with(client_id=None)
+
+
+def _import_settings_with(env_overrides):
+    """Import the settings module in a fresh interpreter with these env vars."""
+    env = {
+        **os.environ,
+        "ENTRA_ID_TENANT_ID": TENANT_ID,
+        "ENTRA_ID_CLIENT_ID": "client-id",
+        "ENTRA_ID_EMAIL_DOMAIN": "rcpch.ac.uk",
+        "ENTRA_ID_CLIENT_SECRET": "",
+        "ENTRA_ID_USE_MANAGED_IDENTITY": "False",
+        "ENTRA_ID_LOGIN_REQUIRED_FOR_RCPCH_STAFF": "False",
+        **env_overrides,
+    }
+    return subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import project.settings as s; print('ENABLED', s.ENTRA_ID_LOGIN_ENABLED)",
+        ],
+        cwd=settings.BASE_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_settings_refuse_both_client_secret_and_managed_identity():
+    result = _import_settings_with(
+        {"ENTRA_ID_CLIENT_SECRET": "secret", "ENTRA_ID_USE_MANAGED_IDENTITY": "True"}
+    )
+
+    assert result.returncode != 0
+    assert "Set only one of ENTRA_ID_CLIENT_SECRET" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "credential_env",
+    [
+        {"ENTRA_ID_CLIENT_SECRET": "secret"},
+        {"ENTRA_ID_USE_MANAGED_IDENTITY": "True"},
+    ],
+)
+def test_settings_enable_entra_id_with_either_credential(credential_env):
+    result = _import_settings_with(credential_env)
+
+    assert result.returncode == 0, result.stderr
+    assert "ENABLED True" in result.stdout
+
+
+def test_settings_disable_entra_id_without_a_credential():
+    result = _import_settings_with({})
+
+    assert result.returncode == 0, result.stderr
+    assert "ENABLED False" in result.stdout
+
+
+def test_settings_refuse_required_without_entra_id_configured():
+    result = _import_settings_with({"ENTRA_ID_LOGIN_REQUIRED_FOR_RCPCH_STAFF": "True"})
+
+    assert result.returncode != 0
+    assert "Entra ID sign in is not configured" in result.stderr
+
+
+# Admin alerts, one binding per user, email confirmation
 
 
 @pytest.mark.django_db
-@override_settings(LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA=False, **ENTRA_OPTIONAL)
-def test_password_session_of_rcpch_staff_kept_when_not_required(client, superuser):
-    password_session(client, superuser)
+@override_settings(**ENTRA_REQUIRED)
+def test_anonymous_callback_failures_do_not_email_admins(client):
+    """
+    Anyone can request the callback, so failures before Microsoft has returned
+    a valid ID token are logged as warnings, not emailed to the admins.
+    """
+    with patch("project.npda.views.entra_id.logger") as logger:
+        # No sign in in progress
+        client.get(reverse("entra_id_callback"), {"code": "x"})
+        # State mismatch
+        complete_entra_sign_in(client, FakeEntraClient(raises=ValueError("state")))
+        # User cancelled, or a made-up code
+        complete_entra_sign_in(
+            client,
+            FakeEntraClient({"error": "access_denied", "error_description": "no"}),
+        )
+        complete_entra_sign_in(
+            client,
+            FakeEntraClient({"error": "invalid_grant", "error_description": "no"}),
+        )
 
-    response = client.get(reverse("home"))
-
-    assert response.status_code == HTTPStatus.OK
-    assert int(client.session["_auth_user_id"]) == superuser.pk
+    assert logger.warning.call_count == 4
+    logger.error.assert_not_called()
 
 
 @pytest.mark.django_db
-@override_settings(LOCAL_DEV_BYPASS_2FA_AND_CAPTCHA=False, **ENTRA_REQUIRED)
-def test_password_session_of_clinician_kept_when_required(client, clinician):
-    password_session(client, clinician)
+@override_settings(**ENTRA_REQUIRED)
+def test_configuration_errors_email_admins(client):
+    """An expired secret or wrong federated credential needs fixing."""
+    with patch("project.npda.views.entra_id.logger") as logger:
+        complete_entra_sign_in(
+            client,
+            FakeEntraClient(
+                {"error": "invalid_client", "error_description": "AADSTS7000215"}
+            ),
+        )
 
-    response = client.get(reverse("home"))
+    logger.error.assert_called_once()
 
-    assert response.status_code == HTTPStatus.OK
-    assert int(client.session["_auth_user_id"]) == clinician.pk
+
+@pytest.mark.django_db
+@override_settings(**ENTRA_REQUIRED)
+def test_failures_for_a_validated_microsoft_account_email_admins(client, clinician):
+    with patch("project.npda.views.entra_id.logger") as logger:
+        complete_entra_sign_in(client, FakeEntraClient(claims_for(clinician.email)))
+
+    logger.error.assert_called_once()
+    logger.warning.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_a_user_can_have_only_one_entra_id_device(superuser):
+    EntraIDDevice.objects.create(
+        user=superuser, name="Entra ID", entra_object_id=OBJECT_ID
+    )
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        EntraIDDevice.objects.create(
+            user=superuser, name="Entra ID", entra_object_id="another-object-id"
+        )
+
+
+@pytest.mark.django_db
+@override_settings(**ENTRA_REQUIRED)
+def test_entra_id_sign_in_confirms_email_of_passwordless_user(
+    client, audit_team_member
+):
+    """
+    New Audit Team members who only sign in with Microsoft never set a
+    password, so email_confirmed would otherwise stay False.
+    """
+    NPDAUser.objects.filter(pk=audit_team_member.pk).update(
+        email_confirmed=False, password="!unusable"
+    )
+    audit_team_member.refresh_from_db()
+    assert not audit_team_member.has_usable_password()
+
+    complete_entra_sign_in(client, FakeEntraClient(claims_for(audit_team_member.email)))
+
+    assert int(client.session["_auth_user_id"]) == audit_team_member.pk
+    audit_team_member.refresh_from_db()
+    assert audit_team_member.email_confirmed
+    assert not audit_team_member.has_usable_password()
+
+
+@pytest.mark.django_db
+@override_settings(**ENTRA_REQUIRED)
+def test_refused_entra_id_sign_in_does_not_confirm_email(client, clinician):
+    NPDAUser.objects.filter(pk=clinician.pk).update(email_confirmed=False)
+
+    complete_entra_sign_in(client, FakeEntraClient(claims_for(clinician.email)))
+
+    clinician.refresh_from_db()
+    assert not clinician.email_confirmed
 
 
 # Switching the setting off again

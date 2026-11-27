@@ -23,6 +23,7 @@ from django_otp import login as otp_login
 
 from ..general_functions.entra_id import (
     build_entra_id_client,
+    is_entra_id_email,
     may_use_entra_id_login,
 )
 from ..general_functions.inactivity_deactivation import (
@@ -50,16 +51,30 @@ def _redirect_uri(request):
     return request.build_absolute_uri(reverse("entra_id_callback"))
 
 
-def _fail(request, message, user=None, details=None):
-    """Show the user why sign in failed and audit it against their account."""
+# Errors from Microsoft's token endpoint that mean our own configuration is
+# wrong (e.g. an expired client secret, or a missing or mismatched federated
+# credential). Anonymous requests cannot cause these, so they alert the admins.
+CONFIGURATION_ERRORS = {"invalid_client", "unauthorized_client"}
+
+
+def _fail(request, message, user=None, details=None, alert_admins=True):
+    """
+    Show the user why sign in failed and audit it against their account.
+
+    Failures are logged at error level, so the admins are emailed, unless
+    alert_admins is False. That is used before Microsoft has returned a valid
+    ID token, because anyone can make those requests: emailing on them would
+    let an anonymous caller flood the admins' inboxes.
+    """
     if user is not None:
         VisitActivity.objects.create(
-            activity=VisitActivity.ENTRA_ID_LOGIN_FAILED,
+            activity=VisitActivity.UNSUCCESSFUL_LOGIN,
             ip_address=get_client_ip(request),
             npdauser=user,
-            details=details or message,
+            details=f"Microsoft Entra ID sign in failed: {details or message}",
         )
-    logger.warning(
+    log = logger.error if alert_admins else logger.warning
+    log(
         "Entra ID sign in failed from %s for %s: %s",
         get_client_ip(request),
         user.email if user else "unmatched account",
@@ -75,11 +90,19 @@ def entra_id_login(request):
     if not settings.ENTRA_ID_LOGIN_ENABLED:
         raise Http404()
 
+    # Pre-select the account the user typed on the login page. Only addresses
+    # on the Entra ID domain are passed on to Microsoft.
+    login_hint = request.GET.get("login_hint", "").strip().lower()
+    if is_entra_id_email(login_hint):
+        account_selection = {"login_hint": login_hint}
+    else:
+        account_selection = {"prompt": "select_account"}
+
     flow = build_entra_id_client().initiate_auth_code_flow(
         # msal adds the openid, profile and offline_access scopes itself
         scopes=[],
         redirect_uri=_redirect_uri(request),
-        prompt="select_account",
+        **account_selection,
     )
     # The flow holds the state, nonce and PKCE verifier checked on the way back
     request.session[ENTRA_ID_FLOW_SESSION_KEY] = flow
@@ -99,19 +122,18 @@ def entra_id_login(request):
 
 def _find_user(claims):
     """
-    Match the Microsoft account to an NPDA user by email address. The tenant is
-    pinned so these claims can only come from RCPCH's own directory, and the
-    first match is then bound to the account's immutable object id.
+    Match the Microsoft account to an NPDA user by email address. The
+    tenant is pinned so these claims can only come from RCPCH's own directory,
+    and only addresses on ENTRA_ID_EMAIL_DOMAIN are considered: a guest account
+    in the tenant can carry an outside email address in its claims.
     """
     candidate_emails = {
         claims[claim].strip().lower()
         for claim in ("email", "preferred_username", "upn")
-        if isinstance(claims.get(claim), str) and "@" in claims[claim]
+        if is_entra_id_email(claims.get(claim))
     }
     if not candidate_emails:
-        return None, None
-
-    emails = ", ".join(sorted(candidate_emails))
+        return None, f"no email address on {settings.ENTRA_ID_EMAIL_DOMAIN}"
 
     query = Q()
     for email in candidate_emails:
@@ -119,8 +141,8 @@ def _find_user(claims):
     matches = list(NPDAUser.objects.filter(query)[:2])
 
     if len(matches) != 1:
-        return None, emails
-    return matches[0], emails
+        return None, ", ".join(sorted(candidate_emails))
+    return matches[0], ", ".join(sorted(candidate_emails))
 
 
 @require_GET
@@ -137,6 +159,7 @@ def entra_id_callback(request):
             request,
             "Your sign in with Microsoft has expired. Please try again.",
             details="No sign in in progress for this session",
+            alert_admins=False,
         )
 
     try:
@@ -151,6 +174,7 @@ def entra_id_callback(request):
             request,
             GENERIC_FAILURE_MESSAGE,
             details=f"Invalid response from Microsoft: {error}",
+            alert_admins=False,
         )
 
     if "error" in result:
@@ -158,6 +182,8 @@ def entra_id_callback(request):
             request,
             GENERIC_FAILURE_MESSAGE,
             details=f"{result.get('error')}: {result.get('error_description')}",
+            # e.g. the user cancelling at Microsoft, or a made-up code
+            alert_admins=result.get("error") in CONFIGURATION_ERRORS,
         )
 
     claims = result.get("id_token_claims") or {}
@@ -178,7 +204,7 @@ def entra_id_callback(request):
     if user is None:
         return _fail(
             request,
-            f"There is no NPDA account for your Microsoft account ({emails}).",
+            "There is no NPDA account for this Microsoft account. Please contact the NPDA team.",
             details=f"No single NPDA user matches {emails}",
         )
 
@@ -207,17 +233,22 @@ def entra_id_callback(request):
             details="Account deactivated due to inactivity",
         )
 
-    device = EntraIDDevice.objects.filter(user=user).first()
-    if device is None:
-        # First Entra ID sign in: bind this Microsoft account to the user
-        device = EntraIDDevice.objects.create(
-            user=user,
-            name=ENTRA_ID_DEVICE_NAME,
-            confirmed=True,
-            entra_object_id=object_id,
-        )
+    # First Entra ID sign in binds this Microsoft account to the user. A user
+    # has at most one EntraIDDevice (a database constraint), and get_or_create
+    # retries the read if a simultaneous sign in created it first, so two
+    # Microsoft accounts can never both be bound to one user.
+    device, created = EntraIDDevice.objects.get_or_create(
+        user=user,
+        defaults={
+            "name": ENTRA_ID_DEVICE_NAME,
+            "confirmed": True,
+            "entra_object_id": object_id,
+        },
+    )
+    if created:
         logger.info("Bound Entra ID object %s to NPDA user %s", object_id, user.email)
-    elif device.entra_object_id != object_id:
+
+    if device.entra_object_id != object_id:
         # The email now belongs to a different Microsoft account. Refuse until
         # the binding is reset with "Reset two-factor authentication" on the
         # user's page (or by deleting the device in the admin).
@@ -234,6 +265,14 @@ def entra_id_callback(request):
             user=user,
             details="Entra ID device is not confirmed",
         )
+
+    if not user.email_confirmed:
+        # email_confirmed is normally set when a user first sets a password.
+        # Audit Team members who only sign in with Microsoft never do, but
+        # signing in with their RCPCH account proves the same thing. A queryset
+        # update so no other save() side effects run.
+        NPDAUser.objects.filter(pk=user.pk).update(email_confirmed=True)
+        user.email_confirmed = True
 
     login(request, user, backend="django.contrib.auth.backends.ModelBackend")
     otp_login(request, device)

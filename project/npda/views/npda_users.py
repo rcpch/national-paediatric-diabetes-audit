@@ -41,10 +41,7 @@ from ..general_functions import (
     organisations_adapter,
     send_email_to_recipients,
 )
-from ..general_functions.entra_id import (
-    ENTRA_ID_LOGIN_REQUIRED_MESSAGE,
-    must_use_entra_id_login,
-)
+from ..general_functions.entra_id import is_entra_id_email, must_use_entra_id_login
 from ..general_functions.inactivity_deactivation import (
     deactivate_user_for_inactivity,
     get_inactivity_deactivation_message,
@@ -893,17 +890,10 @@ class RCPCHLoginView(TwoFactorLoginView):
                 username=self.request.POST.get("auth-username"),
                 password=self.request.POST.get("auth-password"),
             )
-            if user is not None:
-                # Superusers and the RCPCH Audit Team must sign in with
-                # Microsoft Entra ID when the setting is on, even locally
-                if must_use_entra_id_login(user):
-                    messages.add_message(
-                        self.request, messages.ERROR, ENTRA_ID_LOGIN_REQUIRED_MESSAGE
-                    )
-                    return self.delete_cookies_from_response(
-                        redirect(settings.LOGIN_URL)
-                    )
-
+            # Superusers and the RCPCH Audit Team must sign in with Microsoft
+            # Entra ID when the setting is on, even locally: leave them to the
+            # usual workflow, whose form refuses them
+            if user is not None and not must_use_entra_id_login(user):
                 # Deactivate the account if the user has not logged in for
                 # longer than the configured inactivity period
                 if is_inactive_beyond_deactivation_period(user):
@@ -930,8 +920,17 @@ class RCPCHLoginView(TwoFactorLoginView):
     def get_context_data(self, form, **kwargs):
         context = super().get_context_data(form, **kwargs)
         context["entra_id_login_enabled"] = settings.ENTRA_ID_LOGIN_ENABLED
-        context["entra_id_login_required"] = (
-            settings.ENTRA_ID_LOGIN_REQUIRED_FOR_RCPCH_STAFF
+        context["entra_id_email_domain"] = settings.ENTRA_ID_EMAIL_DOMAIN
+
+        # On a re-rendered login page (e.g. after a refused password), show
+        # Sign in with Microsoft if the email typed is on the Entra ID domain.
+        # Decided from the address alone, so it works without JavaScript and
+        # reveals nothing about the account.
+        typed_email = ""
+        if self.steps.current == "auth" and form.is_bound:
+            typed_email = form.data.get(form.add_prefix("username"), "")
+        context["entra_id_login_hint"] = (
+            typed_email.strip().lower() if is_entra_id_email(typed_email) else ""
         )
         return context
 
