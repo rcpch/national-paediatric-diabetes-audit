@@ -75,7 +75,7 @@ A successful sign in also sets `email_confirmed`, which is otherwise only set wh
 
 Inactivity deactivation applies to Entra ID sign in as it does to the password login.
 
-Failed sign ins are recorded in the user's visit activity, where one was matched, as "Login failed", with details starting "Microsoft Entra ID sign in failed:" and the reason. Failures once Microsoft has returned a valid ID token, and configuration errors (e.g. an expired client secret or a missing federated credential), are logged at error level, so the admins are emailed. Failures anyone can trigger anonymously (no sign in in progress, state mismatch, user cancelled, made-up code) are logged as warnings, so the public callback cannot flood the admins' inboxes.
+Failed sign ins are recorded in the user's visit activity, where one was matched, as "Login failed", with details starting "Microsoft Entra ID sign in failed:" and the reason. Failures once Microsoft has returned a valid ID token, and configuration errors returned by Microsoft when redeeming a code (e.g. an expired client secret or a missing federated credential), are logged at error level, so the admins are emailed. Failures anyone can trigger anonymously (no sign in in progress, state mismatch, user cancelled, made-up code, or any error put in the callback's own query string) are logged as warnings, so the public callback cannot flood the admins' inboxes.
 
 ### Switching it on
 
