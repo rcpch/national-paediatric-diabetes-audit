@@ -55,6 +55,7 @@ EMAIL_TRIGGER_FIELDS = [
 LOGGED_FIELDS = [
     "role",
     "is_active",
+    "is_superuser",
     "is_staff",
     "email",
     "first_name",
@@ -445,7 +446,7 @@ def _send_change_notifications(user, changes, current_user):
     role_permission_changes = {
         field: change
         for field, change in email_worthy_changes.items()
-        if field in ["role", "is_active"]
+        if field in ["role", "is_active", "is_superuser", "is_staff"]
     }
 
     # An automatic deactivation due to inactivity is routine housekeeping,
@@ -572,7 +573,7 @@ def _map_changes_to_visit_activity(changes):
     )
     """
 
-    ADMIN_FLAGS = ["is_active"]
+    ADMIN_FLAGS = ["is_active", "is_superuser", "is_staff"]
     USER_RECORD_FIELDS = ["email", "first_name", "surname"]
 
     if "role" in changes:
