@@ -13,6 +13,7 @@ from django.utils.translation import gettext as _
 
 # RCPCH imports
 from ...constants.styles.form_styles import *
+from ..general_functions.entra_id import must_use_entra_id_login
 from ..general_functions.inactivity_deactivation import (
     deactivate_user_for_inactivity,
     get_inactivity_deactivation_message,
@@ -171,6 +172,23 @@ class CaptchaAuthenticationForm(AuthenticationForm):
             self.fields["captcha"].required = False
 
     def confirm_login_allowed(self, user):
+        # Superusers and the RCPCH Audit Team must sign in with Microsoft
+        # Entra ID when the setting is on. Their password and 2FA devices are
+        # left in place so that switching the setting off restores this login.
+        # The error shown is the same as for a wrong password, so this does not
+        # reveal that the password was correct or that the account is staff.
+        if must_use_entra_id_login(user):
+            VisitActivity.objects.create(
+                activity=VisitActivity.UNSUCCESSFUL_LOGIN,
+                ip_address=get_client_ip(self.request),
+                npdauser=user,
+                details="Password login refused: user must sign in with Microsoft Entra ID",
+            )
+            logger.info(
+                "Password login refused for %s: must sign in with Entra ID", user.email
+            )
+            raise self.get_invalid_login_error()
+
         # Deactivate the account if the user has not logged in for longer
         # than the configured inactivity period
         if is_inactive_beyond_deactivation_period(user):

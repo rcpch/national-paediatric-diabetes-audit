@@ -7,6 +7,7 @@ from .general_functions.group_for_group import group_for_role
 from .models import (
     AuditPeriod,
     Banner,
+    EntraIDDevice,
     NPDAUser,
     OrganisationEmployer,
     PaediatricDiabetesUnit,
@@ -118,6 +119,15 @@ class VisitAdmin(admin.ModelAdmin):
 class VisitActivityAdmin(admin.ModelAdmin):
     search_fields = ("activity_datetime", "pk", "ip_address")
     ordering = ("-activity_datetime",)
+
+
+@admin.register(EntraIDDevice)
+class EntraIDDeviceAdmin(admin.ModelAdmin):
+    # Deleting a row unbinds the Microsoft account from the user, so their next
+    # Entra ID sign in binds afresh
+    list_display = ("user", "entra_object_id", "confirmed", "last_used_at")
+    search_fields = ("user__email", "entra_object_id")
+    readonly_fields = ("entra_object_id", "created_at", "last_used_at")
 
 
 @admin.register(Submission)

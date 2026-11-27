@@ -145,6 +145,7 @@ nav:
     - 'developer/manual-setup.md'
     - 'developer/organisations.md'
     - 'developer/users.md'
+    - 'developer/entra-id-login.md'
     - 'developer/testing.md'
     - 'developer/fake_patient_generator.md'
     - 'developer/submission.md'
