@@ -7,10 +7,15 @@ from unittest.mock import patch
 
 import pytest
 
-from project.constants import AUDIT_CENTRE_COORDINATOR, AUDIT_CENTRE_EDITOR
+from project.constants import (
+    AUDIT_CENTRE_COORDINATOR,
+    AUDIT_CENTRE_EDITOR,
+    RCPCH_AUDIT_TEAM,
+)
 from project.npda.models import VisitActivity
 from project.npda.tests.factories.npda_user_factory import NPDAUserFactory
 
+CREATED_USER_RECORD = 10
 CHANGED_USER_RECORD = 11
 CHANGED_USER_ROLE = 12
 CHANGED_ADMIN_FLAG = 13
@@ -26,6 +31,33 @@ def _change(user, **fields):
 
 def _logged(user, activity):
     return VisitActivity.objects.filter(npdauser=user, activity=activity)
+
+
+@pytest.mark.parametrize(
+    "role, role_display, is_active, is_superuser, is_staff",
+    [
+        (AUDIT_CENTRE_EDITOR, "Editor", True, False, False),
+        (RCPCH_AUDIT_TEAM, "RCPCH Audit Team", False, True, True),
+    ],
+)
+@pytest.mark.django_db
+def test_user_creation_logs_role_and_flags(
+    seed_groups_fixture, role, role_display, is_active, is_superuser, is_staff
+):
+    with patch("project.npda.signals._send_user_creation_notification"):
+        user = NPDAUserFactory(
+            role=role,
+            is_active=is_active,
+            is_superuser=is_superuser,
+            is_staff=is_staff,
+        )
+
+    creation = _logged(user, CREATED_USER_RECORD).get()
+
+    assert f"role: '{role}' ({role_display})" in creation.details
+    assert f"is_active: '{is_active}'" in creation.details
+    assert f"is_superuser: '{is_superuser}'" in creation.details
+    assert f"is_staff: '{is_staff}'" in creation.details
 
 
 @pytest.mark.parametrize("field", ["is_superuser", "is_staff"])

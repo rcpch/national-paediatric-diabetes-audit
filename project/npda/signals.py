@@ -62,6 +62,13 @@ LOGGED_FIELDS = [
     "surname",
 ]
 
+# Flags recorded with the role when a user is created
+CREATION_LOGGED_FLAGS = [
+    "is_active",
+    "is_superuser",
+    "is_staff",
+]
+
 ACTIVITY = (
     (1, "Successful login"),  # SUCCESSFUL_LOGIN
     (2, "Login failed"),  # UNSUCCESSFUL_LOGIN
@@ -185,7 +192,7 @@ def log_and_notify_user_changes(sender, instance, created, **kwargs):
         _log_user_activity(
             user=instance,
             activity_type=10,  # CREATED_USER_RECORD
-            details=f"User created by {current_user.email if current_user else 'system'}",
+            details=_user_creation_details(instance, current_user),
             current_user=current_user,
         )
 
@@ -398,6 +405,19 @@ def _log_user_activity(user, activity_type, details, current_user=None):
     logging.info(
         f"Logging user activity: {activity_type_name} for user {user.email}: {details}. Current user: {current_user.email if current_user else 'system'}"
     )
+
+
+def _user_creation_details(user, current_user):
+    """
+    Describe a newly created user for the CREATED_USER_RECORD entry: who created
+    them, and the role and flags they were given, so the permissions a user
+    started with are on record alongside later changes to them.
+    """
+    role_display = user.get_role_display() if user.role else "Not specified"
+    initial_values = [f"role: '{user.role}' ({role_display})"] + [
+        f"{field}: '{getattr(user, field)}'" for field in CREATION_LOGGED_FLAGS
+    ]
+    return f"User created by {current_user.email if current_user else 'system'}: {'; '.join(initial_values)}"
 
 
 def _log_user_changes(user, changes, current_user):
